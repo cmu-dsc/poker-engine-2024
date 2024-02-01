@@ -38,6 +38,7 @@ from config import *
 FoldAction = namedtuple("FoldAction", [])
 CallAction = namedtuple("CallAction", [])
 CheckAction = namedtuple("CheckAction", [])
+# we coalesce BetAction and RaiseAction for convenience
 RaiseAction = namedtuple("RaiseAction", ["amount"])
 Action = Union[FoldAction, CallAction, CheckAction, RaiseAction]
 TerminalState = namedtuple("TerminalState", ["deltas", "previous_state"])
@@ -174,7 +175,7 @@ class RoundState(
             previous_state=self,
         )
 
-    def proceed(self, action) -> "RoundState":
+    def proceed(self, action: Action) -> "RoundState":
         """
         Advances the game tree by one action performed by the active player.
         """
