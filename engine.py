@@ -22,7 +22,14 @@ TOTAL: 816 combos
 """
 
 from collections import namedtuple
-from typing import Set, Type
+import json
+import os
+from queue import Queue
+import socket
+import subprocess
+from threading import Thread
+import time
+from typing import List, Optional, Set, Type, Union
 from evaluate import evaluate
 import eval7
 
@@ -33,6 +40,33 @@ CallAction = namedtuple("CallAction", [])
 CheckAction = namedtuple("CheckAction", [])
 RaiseAction = namedtuple("RaiseAction", ["amount"])
 TerminalState = namedtuple("TerminalState", ["deltas", "previous_state"])
+
+DECODE = {"F": FoldAction, "C": CallAction, "K": CheckAction, "R": RaiseAction}
+
+CCARDS = lambda cards: ",".join(map(str, cards))
+PCARDS = lambda cards: "[{}]".format(" ".join(map(str, cards)))
+PVALUE = lambda name, value: ", {} ({})".format(name, value)
+STATUS = lambda players: "".join([PVALUE(p.name, p.bankroll) for p in players])
+
+# Socket encoding scheme:
+#
+# T#.### - the player's game clock
+# P# - the player's index
+# H**,** - the player's hand in common format
+# F - a fold action in the round history
+# C - a call action in the round history
+# K - a check action in the round history
+# R### - a raise action in the round history
+# B**,**,**,**,** - the board cards in common format
+# O**,** - the opponent's hand in common format
+# D### - the player's bankroll delta from the round
+# Q - game over
+#
+# Clauses are separated by spaces.
+# Messages end with '\n'.
+# The engine expects a response of K at the end of the round as an ack,
+# otherwise a response which encodes the player's action.
+# Action history is sent once, including the player's actions.
 
 
 class ShortDeck(eval7.Deck):
@@ -193,29 +227,198 @@ class Player:
     Handles subprocess and socket interactions with one player's pokerbot.
     """
 
-    def __init__(self) -> None:
-        pass
+    def __init__(self, name: str, path: str) -> None:
+        self.name: str = name
+        self.path: str = path
+        self.game_clock: float = STARTING_GAME_CLOCK
+        self.bankroll: int = 0
+        self.commands: Optional[dict] = None
+        self.bot_subprocess: Optional[subprocess.Popen] = None
+        self.socketfile = None
+        self.bytes_queue: Queue = Queue()
 
     def build(self) -> None:
         """
         Loads the commands file and builds the pokerbot.
         """
+        try:
+            with open(os.path.join(self.path, "commands.json"), "r") as json_file:
+                commands = json.load(json_file)
+            if (
+                "build" in commands
+                and "run" in commands
+                and isinstance(commands["build"], list)
+                and isinstance(commands["run"], list)
+            ):
+                self.commands = commands
+            else:
+                print(f"{self.name} commands.json missing command")
+        except FileNotFoundError:
+            print(f"{self.name} commands.json not found - check PLAYER_PATH")
+        except json.decoder.JSONDecodeError:
+            print(f"{self.name} commands.json misformatted")
+
+        if self.commands and self.commands["build"]:
+            try:
+                proc = subprocess.run(
+                    self.commands["build"],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    cwd=self.path,
+                    timeout=BUILD_TIMEOUT,
+                    check=False,
+                )
+                self.bytes_queue.put(proc.stdout)
+            except subprocess.TimeoutExpired as timeout_expired:
+                error_message = f"Timed out waiting for {self.name} to build"
+                print(error_message)
+                self.bytes_queue.put(timeout_expired.stdout)
+                self.bytes_queue.put(error_message.encode())
+            except (TypeError, ValueError):
+                print(f"{self.name} build command misformatted")
+            except OSError:
+                print(f'{self.name} build failed - check "build" in commands.json')
 
     def run(self) -> None:
         """
         Runs the pokerbot and establishes the socket connection.
         """
+        if self.commands and "run" in self.commands and self.commands["run"]:
+            try:
+                # Create a server socket to listen for a connection from the pokerbot
+                server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                with server_socket:
+                    server_socket.bind(("", 0))  # Bind to an available port
+                    server_socket.settimeout(CONNECT_TIMEOUT)
+                    server_socket.listen()
+                    port = server_socket.getsockname()[
+                        1
+                    ]  # Get the dynamically assigned port
+
+                    # Start the pokerbot process
+                    self.bot_subprocess = subprocess.Popen(
+                        self.commands["run"] + [str(port)],
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.STDOUT,
+                        cwd=self.path,
+                    )
+
+                    # Thread for reading bot's output
+                    def enqueue_output(out, queue):
+                        for line in iter(out.readline, b""):
+                            queue.put(line)
+                        out.close()
+
+                    # Start a separate bot listening thread
+                    Thread(
+                        target=enqueue_output,
+                        args=(self.bot_subprocess.stdout, self.bytes_queue),
+                        daemon=True,
+                    ).start()
+
+                    # Wait for the bot to connect
+                    client_socket, _ = server_socket.accept()
+                    with client_socket:
+                        client_socket.settimeout(CONNECT_TIMEOUT)
+                        self.socketfile = client_socket.makefile("rw")
+                        print(f"{self.name} connected successfully")
+
+            except (TypeError, ValueError):
+                print(f"{self.name} run command misformatted")
+            except OSError:
+                print(f'{self.name} run failed - check "run" in commands.json')
+            except socket.timeout:
+                print(f"Timed out waiting for {self.name} to connect")
 
     def stop(self) -> None:
         """
         Closes the socket connection and stops the pokerbot.
         """
+        if self.socketfile is not None:
+            try:
+                self.socketfile.write("Q\n")
+                self.socketfile.flush()  # Ensure the message is sent before closing
+                self.socketfile.close()
+            except (socket.timeout, OSError) as e:
+                print(f"Error while disconnecting {self.name}: {e}")
 
-    def query(self, round_state, player_message, game_log) -> None:
+        if self.bot_subprocess is not None:
+            try:
+                outs, _ = self.bot_subprocess.communicate(timeout=CONNECT_TIMEOUT)
+                self.bytes_queue.put(outs)
+            except subprocess.TimeoutExpired:
+                print(f"Timed out waiting for {self.name} to quit")
+                self.bot_subprocess.kill()
+                outs, _ = self.bot_subprocess.communicate()
+                self.bytes_queue.put(outs)
+
+        # Write the subprocess output to a log file
+        log_file_path = f"{self.name}.txt"
+        with open(log_file_path, "wb") as log_file:
+            bytes_written = 0
+            for output in self.bytes_queue.queue:
+                try:
+                    bytes_written += log_file.write(output)
+                    if bytes_written >= PLAYER_LOG_SIZE_LIMIT:
+                        break
+                except TypeError:
+                    pass
+
+    def query(
+        self, round_state: RoundState, player_message: List[str], game_log: List[str]
+    ) -> Union[FoldAction, CallAction, CheckAction, RaiseAction]:
         """
         Requests one action from the pokerbot over the socket connection.
         At the end of the round, we request a CheckAction from the pokerbot.
         """
+        legal_actions = (
+            round_state.legal_actions()
+            if isinstance(round_state, RoundState)
+            else {CheckAction}
+        )
+        if self.socketfile is not None and self.game_clock > 0.0:
+            try:
+                player_message[0] = f"T{self.game_clock:.3f}"
+                message = " ".join(player_message) + "\n"
+                del player_message[1:]  # do not send redundant action history
+                start_time = time.perf_counter()
+                self.socketfile.write(message)
+                self.socketfile.flush()
+                clause = self.socketfile.readline().strip()
+                end_time = time.perf_counter()
+                if ENFORCE_GAME_CLOCK:
+                    self.game_clock -= end_time - start_time
+                if self.game_clock <= 0.0:
+                    raise socket.timeout
+
+                action_type = DECODE.get(clause[0], None)
+                if action_type in legal_actions:
+                    if action_type == RaiseAction:
+                        amount = int(clause[1:])
+                        min_raise, max_raise = round_state.raise_bounds()
+                        if min_raise <= amount <= max_raise:
+                            return action_type(amount)
+                    else:
+                        return action_type()
+                else:
+                    game_log.append(
+                        f"{self.name} attempted illegal {action_type.__name__} or unknown action"
+                    )
+
+            except socket.timeout:
+                error_message = f"{self.name} ran out of time"
+                game_log.append(error_message)
+                print(error_message)
+                self.game_clock = 0.0
+            except OSError:
+                error_message = f"{self.name} disconnected"
+                game_log.append(error_message)
+                print(error_message)
+                self.game_clock = 0.0
+            except (IndexError, KeyError, ValueError) as e:
+                game_log.append(f"{self.name} response misformatted: {clause} - {e}")
+
+        return CheckAction() if CheckAction in legal_actions else FoldAction()
 
 
 class Game:
