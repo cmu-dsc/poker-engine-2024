@@ -115,15 +115,77 @@ class RoundState(
             self.pips[active] + max_contribution,
         )
 
-    def proceed_street(self) -> None:
+    def proceed_street(self) -> "RoundState":
         """
         Resets the players' pips and advances the game tree to the next round of betting.
         """
+        if self.street >= 2:  # After river, proceed to showdown
+            return self.showdown()
 
-    def proceed(self, action) -> None:
+        # Dealing the next card (flop or river) and advancing the street
+        new_street = self.street + 1
+        new_hands = self.hands
+        if new_street in [1, 2]:  # Dealing a card for flop and river
+            for i in range(len(new_hands)):
+                new_hands[i].append(self.deck.pop())
+
+        return RoundState(
+            button=1 - self.button,  # Switching the dealer button
+            street=new_street,
+            pips=[0, 0],  # Resetting the current round's bet amounts
+            stacks=self.stacks,
+            hands=new_hands,
+            deck=self.deck,
+            previous_state=self,
+        )
+
+    def proceed(self, action) -> "RoundState":
         """
         Advances the game tree by one action performed by the active player.
         """
+        active = self.button % 2
+        if isinstance(action, FoldAction):
+            # If a player folds, the other player wins the pot
+            delta = self.stacks[1 - active] - STARTING_STACK
+            return TerminalState([delta, -delta], self.previous_state)
+
+        new_pips = list(self.pips)
+        new_stacks = list(self.stacks)
+
+        if isinstance(action, CallAction):
+            # Player matches the current highest bet
+            contribution = new_pips[1 - active] - new_pips[active]
+            new_stacks[active] -= contribution
+            new_pips[active] += contribution
+
+        elif isinstance(action, CheckAction):
+            # Player chooses not to bet further
+            pass  # No change in pips or stacks
+
+        elif isinstance(action, RaiseAction):
+            # Player raises the bet
+            contribution = action.amount - new_pips[active]
+            new_stacks[active] -= contribution
+            new_pips[active] += contribution
+
+        # Check if both players have acted and the betting is equal
+        if new_pips[0] == new_pips[1]:
+            if self.street == 2:  # After river, proceed to showdown
+                return self.showdown()
+            else:
+                # Proceed to the next street
+                return self.proceed_street()
+
+        # Update the game state and return
+        return RoundState(
+            button=1 - self.button,
+            street=self.street,
+            pips=new_pips,
+            stacks=new_stacks,
+            hands=self.hands,
+            deck=self.deck,
+            previous_state=self,
+        )
 
 
 class Player:
