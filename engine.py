@@ -22,6 +22,7 @@ TOTAL: 816 combos
 """
 
 from collections import namedtuple
+from typing import Set, Type
 from evaluate import evaluate
 import eval7
 
@@ -31,8 +32,7 @@ FoldAction = namedtuple("FoldAction", [])
 CallAction = namedtuple("CallAction", [])
 CheckAction = namedtuple("CheckAction", [])
 RaiseAction = namedtuple("RaiseAction", ["amount"])
-BidAction = namedtuple("BidAction", ["amount"])
-TerminalState = namedtuple("TerminalState", ["deltas", "bids", "previous_state"])
+TerminalState = namedtuple("TerminalState", ["deltas", "previous_state"])
 
 
 class ShortDeck(eval7.Deck):
@@ -53,8 +53,6 @@ class RoundState(
         [
             "button",
             "street",
-            "auction",
-            "bids",
             "pips",
             "stacks",
             "hands",
@@ -65,7 +63,7 @@ class RoundState(
 ):
     """Encodes the game tree for one round of poker."""
 
-    def showdown(self) -> None:
+    def showdown(self) -> TerminalState:
         """
         Compares the player's hands and computes payoffs.
         """
@@ -79,20 +77,43 @@ class RoundState(
             delta = (self.stacks[0] - self.stacks[1]) // 2
         return TerminalState([delta, -delta], self.bids, self)
 
-    def legal_actions(self) -> None:
+    def legal_actions(self) -> Set[Type]:
         """
-        Returns a set which corresponds to the active player's legal moves
+        Returns a set which corresponds to the active player's legal moves.
         """
+        active = self.button % 2
+        continue_cost = self.pips[1 - active] - self.pips[active]
 
-    def raise_bounds(self) -> None:
+        if continue_cost == 0:  # No additional chips required to stay in the hand
+            bets_forbidden = self.stacks[0] == 0 or self.stacks[1] == 0
+            return {CheckAction} if bets_forbidden else {CheckAction, RaiseAction}
+
+        # If the active player must contribute more chips to continue
+        raises_forbidden = (
+            continue_cost >= self.stacks[active] or self.stacks[1 - active] == 0
+        )
+        return (
+            {FoldAction, CallAction}
+            if raises_forbidden
+            else {FoldAction, CallAction, RaiseAction}
+        )
+
+    def raise_bounds(self) -> (int, int):
         """
         Returns a tuple of the minimum and maximum legal raises.
         """
-
-    def bid_bounds(self) -> None:
-        """
-        Returns a tuple of the minimum and maximum legal bid amounts
-        """
+        active = self.button % 2
+        continue_cost = self.pips[1 - active] - self.pips[active]
+        max_contribution = min(
+            self.stacks[active], self.stacks[1 - active] + continue_cost
+        )
+        min_contribution = min(
+            max_contribution, continue_cost + max(continue_cost, BIG_BLIND)
+        )
+        return (
+            self.pips[active] + min_contribution,
+            self.pips[active] + max_contribution,
+        )
 
     def proceed_street(self) -> None:
         """
