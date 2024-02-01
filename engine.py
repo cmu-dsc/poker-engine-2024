@@ -39,6 +39,7 @@ FoldAction = namedtuple("FoldAction", [])
 CallAction = namedtuple("CallAction", [])
 CheckAction = namedtuple("CheckAction", [])
 RaiseAction = namedtuple("RaiseAction", ["amount"])
+Action = Union[FoldAction, CallAction, CheckAction, RaiseAction]
 TerminalState = namedtuple("TerminalState", ["deltas", "previous_state"])
 
 DECODE = {"F": FoldAction, "C": CallAction, "K": CheckAction, "R": RaiseAction}
@@ -366,7 +367,7 @@ class Player:
 
     def query(
         self, round_state: RoundState, player_message: List[str], game_log: List[str]
-    ) -> Union[FoldAction, CallAction, CheckAction, RaiseAction]:
+    ) -> Action:
         """
         Requests one action from the pokerbot over the socket connection.
         At the end of the round, we request a CheckAction from the pokerbot.
@@ -427,32 +428,163 @@ class Game:
     """
 
     def __init__(self) -> None:
-        pass
+        self.log = [f"CMU Poker Bot Game - {PLAYER_1_NAME} vs {PLAYER_2_NAME}"]
+        self.player_messages = [[], []]
+        self.preflop_bets = {PLAYER_1_NAME: 0, PLAYER_2_NAME: 0}
+        self.flop_bets = {PLAYER_1_NAME: 0, PLAYER_2_NAME: 0}
+        self.river_bets = {PLAYER_1_NAME: 0, PLAYER_2_NAME: 0}
+        # EV bets tracking, if necessary
 
-    def log_round_state(self, players, round_state) -> None:
+    def log_round_state(self, players: List[Player], round_state: RoundState) -> None:
         """
         Incorporates RoundState information into the game log and player messages.
         """
+        if round_state.street == 0:  # Pre-flop
+            self.log.append(f"{players[0].name} posts the blind of {SMALL_BLIND}")
+            self.log.append(f"{players[1].name} posts the blind of {BIG_BLIND}")
+            self.log.append(f"{players[0].name} dealt {PCARDS(round_state.hands[0])}")
+            self.log.append(f"{players[1].name} dealt {PCARDS(round_state.hands[1])}")
+            self.player_messages[0] = ["T0.", "P0", "H" + CCARDS(round_state.hands[0])]
+            self.player_messages[1] = ["T0.", "P1", "H" + CCARDS(round_state.hands[1])]
+        elif round_state.street == 1:  # Flop
+            flop_card = round_state.deck.peek(1)
+            self.log.append(f"Flop {PCARDS(flop_card)}")
+            compressed_flop = "B" + CCARDS(flop_card)
+            self.player_messages[0].append(compressed_flop)
+            self.player_messages[1].append(compressed_flop)
+        elif round_state.street == 2:  # River
+            river_card = round_state.deck.peek(1)
+            self.log.append(f"River {PCARDS(river_card)}")
+            compressed_river = "B" + CCARDS(river_card)
+            self.player_messages[0].append(compressed_river)
+            self.player_messages[1].append(compressed_river)
 
-    def log_action(self, name, action, bet_override) -> None:
+        self.log.append(
+            f"Bets: {self.preflop_bets[players[0].name]}, {self.preflop_bets[players[1].name]}"
+        )
+        self.log.append(f"Stacks: {round_state.stacks[0]}, {round_state.stacks[1]}")
+
+    def log_action(self, name: str, action: Action, bet_override: bool) -> None:
         """
         Incorporates action information into the game log and player messages.
         """
+        if isinstance(action, FoldAction):
+            phrasing = " folds"
+            code = "F"
+        elif isinstance(action, CallAction):
+            phrasing = " calls"
+            code = "C"
+        elif isinstance(action, CheckAction):
+            phrasing = " checks"
+            code = "K"
+        elif isinstance(action, RaiseAction):
+            phrasing = (" bets " if bet_override else " raises to ") + str(
+                action.amount
+            )
+            code = "R" + str(action.amount)
+        else:
+            raise ValueError("Unrecognized action type")
 
-    def log_terminal_state(self, players, round_state) -> None:
+        self.log.append(f"{name}{phrasing}")
+        self.player_messages[0].append(code)
+        self.player_messages[1].append(code)
+
+    def log_terminal_state(
+        self, players: List[Player], round_state: TerminalState
+    ) -> None:
         """
         Incorporates TerminalState information into the game log and player messages.
         """
+        previous_state = round_state.previous_state
+        if FoldAction not in previous_state.legal_actions():
+            # If the round didn't end in a fold, log the hands shown
+            self.log.append(
+                f"{players[0].name} shows {PCARDS(previous_state.hands[0])}"
+            )
+            self.log.append(
+                f"{players[1].name} shows {PCARDS(previous_state.hands[1])}"
+            )
+            self.player_messages[0].append("O" + CCARDS(previous_state.hands[1]))
+            self.player_messages[1].append("O" + CCARDS(previous_state.hands[0]))
 
-    def run_round(self, players):
+        # Log the deltas (amounts won or lost)
+        self.log.append(f"{players[0].name} awarded {round_state.deltas[0]}")
+        self.log.append(f"{players[1].name} awarded {round_state.deltas[1]}")
+
+        # Append deltas to player messages
+        self.player_messages[0].append("D" + str(round_state.deltas[0]))
+        self.player_messages[1].append("D" + str(round_state.deltas[1]))
+
+    def run_round(self, players: List[Player]) -> None:
         """
         Runs one round of poker (1 hand).
         """
+        deck = ShortDeck()
+        deck.shuffle()
 
-    def run(self):
+        # Deal one card to each player
+        hands = [deck.deal(1), deck.deal(1)]
+        pips = [SMALL_BLIND, BIG_BLIND]
+        stacks = [STARTING_STACK - SMALL_BLIND, STARTING_STACK - BIG_BLIND]
+
+        round_state = RoundState(0, 0, pips, stacks, hands, deck, None)
+
+        # Reset bet tracking
+        self.preflop_bets = {players[0].name: SMALL_BLIND, players[1].name: BIG_BLIND}
+
+        while not isinstance(round_state, TerminalState):
+            self.log_round_state(players, round_state)
+            active = round_state.button % 2
+            player = players[active]
+            action = player.query(round_state, self.player_messages[active], self.log)
+            bet_override = round_state.pips == [0, 0]
+            self.log_action(player.name, action, bet_override)
+            round_state = round_state.proceed(action)
+
+        self.log_terminal_state(players, round_state)
+
+        # Update bankrolls after the round
+        for player, delta in zip(players, round_state.deltas):
+            player.bankroll += delta
+
+    def run(self) -> None:
         """
         Runs one game of poker.
         """
+        # Custom ASCII art for CMU
+        print("   _____ __  __ _    _   _____      _             ")
+        print("  / ____|  \/  | |  | | |  __ \    | |            ")
+        print(" | |    | \  / | |  | | | |__) |__ | | _____ _ __ ")
+        print(" | |    | |\/| | |  | | |  ___/ _ \| |/ / _ \ '__|")
+        print(" | |____| |  | | |__| | | |  | (_) |   <  __/ |   ")
+        print("  \_____|_|  |_|\____/  |_|   \___/|_|\_\___|_|   ")
+        print()
+        print("Starting the Poker Game...")
+
+        players = [
+            Player(PLAYER_1_NAME, PLAYER_1_PATH),
+            Player(PLAYER_2_NAME, PLAYER_2_PATH),
+        ]
+        for player in players:
+            player.build()
+            player.run()
+
+        for round_num in range(1, NUM_ROUNDS + 1):
+            self.log.append("")
+            self.log.append("Round #" + str(round_num) + STATUS(players))
+            self.run_round(players)
+            players = players[::-1]  # Alternate the dealer
+
+        self.log.append("")
+        self.log.append("Final" + STATUS(players))
+        for player in players:
+            player.stop()
+
+        # Write game log to a file
+        log_filename = GAME_LOG_FILENAME + ".txt"
+        print("Writing", log_filename)
+        with open(log_filename, "w") as log_file:
+            log_file.write("\n".join(self.log))
 
 
 if __name__ == "__main__":
