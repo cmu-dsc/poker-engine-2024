@@ -25,6 +25,7 @@ from collections import namedtuple
 import json
 import os
 from queue import Queue
+import random
 import socket
 import subprocess
 from threading import Thread
@@ -71,7 +72,7 @@ STATUS = lambda players: "".join([PVALUE(p.name, p.bankroll) for p in players])
 # Action history is sent once, including the player's actions.
 
 
-class ShortDeck(eval7.Deck):
+class ShortDeck:
     """Custom deck for the poker variant with cards ranked 1 to 6 across 3 suits."""
 
     def __init__(self):
@@ -80,7 +81,18 @@ class ShortDeck(eval7.Deck):
         self.cards = [
             eval7.Card(rank + suit) for suit in card_suits for rank in card_ranks
         ]
-        super().__init__()
+
+    def shuffle(self):
+        """Shuffles the deck."""
+        random.shuffle(self.cards)
+
+    def deal(self, n):
+        """Deals n cards from the deck."""
+        return [self.cards.pop() for _ in range(n)]
+
+    def peek(self, n):
+        """Peeks at the top n cards of the deck without removing them."""
+        return self.cards[:n]
 
 
 class RoundState(
@@ -181,9 +193,20 @@ class RoundState(
         """
         active = self.button % 2
         if isinstance(action, FoldAction):
-            # If a player folds, the other player wins the pot
-            delta = self.stacks[1 - active] - STARTING_STACK
-            return TerminalState([delta, -delta], self.previous_state)
+            # Determine the amount lost by the folding player
+            # If this is preflop, the SB loses their blind, and BB wins the SB amount
+            if self.street == 0:  # Preflop
+                sb_index = (
+                    self.button % 2
+                )  # SB is the player with the button in heads-up
+                bb_index = 1 - sb_index
+                delta = SMALL_BLIND if active == sb_index else BIG_BLIND
+                deltas = [-delta if i == active else delta for i in range(2)]
+            else:
+                # Postflop, the pot could contain more than just the blinds
+                delta = self.stacks[1 - active] - STARTING_STACK
+                deltas = [delta, -delta] if active == 0 else [-delta, delta]
+            return TerminalState(deltas, self)
 
         new_pips = list(self.pips)
         new_stacks = list(self.stacks)
@@ -299,6 +322,8 @@ class Player:
 
                     # Start the pokerbot process
                     self.bot_subprocess = subprocess.Popen(
+                        # self.commands["run"] + ["--port", str(port)],
+                        # idk why this doesn't work idk if it's an issue
                         self.commands["run"] + [str(port)],
                         stdout=subprocess.PIPE,
                         stderr=subprocess.STDOUT,
@@ -497,7 +522,9 @@ class Game:
         Incorporates TerminalState information into the game log and player messages.
         """
         previous_state = round_state.previous_state
-        if previous_state is not None and FoldAction not in previous_state.legal_actions():
+        if previous_state is None:
+            return
+        if FoldAction not in previous_state.legal_actions():
             # If the round didn't end in a fold, log the hands shown
             self.log.append(
                 f"{players[0].name} shows {PCARDS(previous_state.hands[0])}"
