@@ -1,5 +1,5 @@
 """
-CMU Data Science Club Poker Bot Competition Game Engine 2024
+CMU Poker Bot Competition Game Engine 2024
 """
 
 """
@@ -20,19 +20,19 @@ pair (270 combos)
 high card (384 combos)
 TOTAL: 816 combos
 """
-
-from collections import namedtuple
 import json
 import os
-from queue import Queue
 import random
 import socket
 import subprocess
-from threading import Thread
 import time
+from collections import namedtuple
+from queue import Queue
+from threading import Thread
 from typing import List, Optional, Set, Type, Union
-from evaluate import evaluate
+
 import eval7
+from evaluate import evaluate
 
 from config import *
 
@@ -579,7 +579,6 @@ class Game:
         """
         Runs one game of poker.
         """
-        # Custom ASCII art for CMU
         print("   _____ __  __ _    _   _____      _             ")
         print("  / ____|  \/  | |  | | |  __ \    | |            ")
         print(" | |    | \  / | |  | | | |__) |__ | | _____ _ __ ")
