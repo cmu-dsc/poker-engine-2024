@@ -75,7 +75,7 @@ class ShortDeck(eval7.Deck):
     """Custom deck for the poker variant with cards ranked 1 to 6 across 3 suits."""
 
     def __init__(self):
-        card_ranks = "123456"
+        card_ranks = "234567"
         card_suits = "shd"  # spades, hearts, diamonds
         self.cards = [
             eval7.Card(rank + suit) for suit in card_suits for rank in card_ranks
@@ -497,7 +497,7 @@ class Game:
         Incorporates TerminalState information into the game log and player messages.
         """
         previous_state = round_state.previous_state
-        if FoldAction not in previous_state.legal_actions():
+        if previous_state is not None and FoldAction not in previous_state.legal_actions():
             # If the round didn't end in a fold, log the hands shown
             self.log.append(
                 f"{players[0].name} shows {PCARDS(previous_state.hands[0])}"
