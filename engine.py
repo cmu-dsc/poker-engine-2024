@@ -19,8 +19,6 @@ RaiseAction = namedtuple("RaiseAction", ["amount"])
 Action = Union[FoldAction, CallAction, CheckAction, RaiseAction]
 TerminalState = namedtuple("TerminalState", ["deltas", "previous_state"])
 
-DECODE = {"F": FoldAction, "C": CallAction, "K": CheckAction, "R": RaiseAction}
-
 CCARDS = lambda cards: ",".join(map(str, cards))
 PCARDS = lambda cards: "[{}]".format(" ".join(map(str, cards)))
 PVALUE = lambda name, value: ", {} ({})".format(name, value)
@@ -319,28 +317,22 @@ class Game:
 
     def log_action(self, name: str, action: Action, bet_override: bool) -> None:
         """
-        Incorporates action information into the game log and player messages.
+        Incorporates action information into the game log.
         """
         if isinstance(action, FoldAction):
             phrasing = " folds"
-            code = "F"
         elif isinstance(action, CallAction):
             phrasing = " calls"
-            code = "C"
         elif isinstance(action, CheckAction):
             phrasing = " checks"
-            code = "K"
         elif isinstance(action, RaiseAction):
             phrasing = (" bets " if bet_override else " raises to ") + str(
                 action.amount
             )
-            code = "R" + str(action.amount)
         else:
             raise ValueError("Unrecognized action type")
 
         self.log.append(f"{name}{phrasing}")
-        self.player_messages[0].append(code)
-        self.player_messages[1].append(code)
 
     def log_terminal_state(
         self, players: List[Player], round_state: TerminalState
@@ -377,28 +369,26 @@ class Game:
         deck = ShortDeck()
         deck.shuffle()
 
-        # Deal one card to each player
         hands = [deck.deal(1), deck.deal(1)]
         pips = [SMALL_BLIND, BIG_BLIND]
         stacks = [STARTING_STACK - SMALL_BLIND, STARTING_STACK - BIG_BLIND]
 
         round_state = RoundState(0, 0, pips, stacks, hands, deck, None)
 
-        # Reset bet tracking
         self.preflop_bets = {players[0].name: SMALL_BLIND, players[1].name: BIG_BLIND}
 
         while not isinstance(round_state, TerminalState):
             self.log_round_state(players, round_state)
             active = round_state.button % 2
             player = players[active]
-            action = player.query(round_state, self.player_messages[active], self.log)
-            bet_override = round_state.pips == [0, 0]
-            self.log_action(player.name, action, bet_override)
+
+            action = player.query(round_state, self.log)
+            self.log_action(player.name, action, round_state.pips == [0, 0])
+
             round_state = round_state.proceed(action)
 
         self.log_terminal_state(players, round_state)
 
-        # Update bankrolls after the round
         for player, delta in zip(players, round_state.deltas):
             player.bankroll += delta
 
@@ -416,27 +406,25 @@ class Game:
         print("Starting the Poker Game...")
 
         players = [
-            Player(PLAYER_1_NAME, PLAYER_1_PATH),
-            Player(PLAYER_2_NAME, PLAYER_2_PATH),
+            Player(PLAYER_1_NAME, PLAYER_1_DNS),
+            Player(PLAYER_2_NAME, PLAYER_2_DNS),
         ]
+
         for player in players:
-            player.build()
             player.run()
 
         for round_num in range(1, NUM_ROUNDS + 1):
-            self.log.append("")
-            self.log.append("Round #" + str(round_num) + STATUS(players))
+            self.log.append(f"\nRound #{round_num} {STATUS(players)}")
             self.run_round(players)
             players = players[::-1]  # Alternate the dealer
 
-        self.log.append("")
-        self.log.append("Final" + STATUS(players))
+        self.log.append("\nFinal" + STATUS(players))
         for player in players:
-            player.stop()
+            player.reset
 
-        # Write game log to a file
+        # this needs to be uploaded to S3
         log_filename = GAME_LOG_FILENAME + ".txt"
-        print("Writing", log_filename)
+        print(f"Writing {log_filename}")
         with open(log_filename, "w") as log_file:
             log_file.write("\n".join(self.log))
 
