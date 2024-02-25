@@ -17,9 +17,8 @@ high card (384 combos)
 TOTAL: 816 combos
 """
 
-from random import random
+from random import shuffle
 from typing import List
-import eval7
 
 
 class ShortDeck:
@@ -28,13 +27,11 @@ class ShortDeck:
     def __init__(self):
         card_ranks = "234567"
         card_suits = "shd"  # spades, hearts, diamonds
-        self.cards = [
-            eval7.Card(rank + suit) for suit in card_suits for rank in card_ranks
-        ]
+        self.cards = [rank + suit for suit in card_suits for rank in card_ranks]
 
     def shuffle(self):
         """Shuffles the deck."""
-        random.shuffle(self.cards)
+        shuffle(self.cards)
 
     def deal(self, n):
         """Deals n cards from the deck."""
@@ -45,60 +42,60 @@ class ShortDeck:
         return self.cards[:n]
 
 
-def is_trips(hand: List[eval7.Card]) -> bool:
-    ranks = [card.rank for card in hand]
+def is_trips(hand: List[str]) -> bool:
+    ranks = [card[0] for card in hand]
     return len(set(ranks)) == 1
 
 
-def score_for_trips(hand: List[eval7.Card]) -> int:
+def score_for_trips(hand: List[str]) -> int:
     return 5000 + high_card_value(hand)
 
 
-def is_straight_flush(hand: List[eval7.Card]) -> bool:
+def is_straight_flush(hand: List[str]) -> bool:
     return is_straight(hand) and is_flush(hand)
 
 
-def score_for_straight_flush(hand: List[eval7.Card]) -> int:
+def score_for_straight_flush(hand: List[str]) -> int:
     return 4000 + high_card_value(hand)
 
 
-def is_flush(hand: List[eval7.Card]) -> bool:
-    suits = [card.suit for card in hand]
+def is_flush(hand: List[str]) -> bool:
+    suits = [card[1] for card in hand]
     return len(set(suits)) == 1
 
 
-def score_for_flush(hand: List[eval7.Card]) -> int:
+def score_for_flush(hand: List[str]) -> int:
     return 3000 + high_card_value(hand)
 
 
-def is_straight(hand: List[eval7.Card]) -> bool:
-    ranks = sorted([rank_value(card.rank) for card in hand])
-    return ranks[0] + 1 == ranks[1] and ranks[1] + 1 == ranks[2]
+def is_straight(hand: List[str]) -> bool:
+    ranks = sorted([int(card[0]) for card in hand])
+    return ranks == list(range(min(ranks), min(ranks) + 3))
 
 
-def score_for_straight(hand: List[eval7.Card]) -> int:
+def score_for_straight(hand: List[str]) -> int:
     return 2000 + high_card_value(hand)
 
 
-def is_pair(hand: List[eval7.Card]) -> bool:
-    ranks = [card.rank for card in hand]
+def is_pair(hand: List[str]) -> bool:
+    ranks = [card[0] for card in hand]
     return len(set(ranks)) == 2
 
 
-def score_for_pair(hand: List[eval7.Card]) -> int:
-    ranks = sorted([rank_value(card.rank) for card in hand])
+def score_for_pair(hand: List[str]) -> int:
+    ranks = sorted([int(card[0]) for card in hand], reverse=True)
     if ranks[0] == ranks[1]:
         return 1000 + 110 * ranks[0] + ranks[2]
     else:
         return 1000 + 110 * ranks[2] + ranks[0]
 
 
-def high_card_value(hand: List[eval7.Card]) -> int:
-    ranks = sorted([rank_value(card.rank) for card in hand], reverse=True)
-    return 100 * ranks[0] + 10 * ranks[1] + 1 * ranks[2]
+def high_card_value(hand: List[str]) -> int:
+    ranks = sorted([int(card[0]) for card in hand], reverse=True)
+    return 100 * ranks[0] + 10 * ranks[1] + ranks[2]
 
 
-def evaluate(hand: List[eval7.Card]) -> int:
+def evaluate(hand: List[str]) -> int:
     assert len(hand) == 3, "hand must be complete"
     if is_trips(hand):
         return score_for_trips(hand)
@@ -112,7 +109,3 @@ def evaluate(hand: List[eval7.Card]) -> int:
         return score_for_pair(hand)
     else:
         return high_card_value(hand)
-
-
-def rank_value(rank: str) -> int:
-    return int(rank)

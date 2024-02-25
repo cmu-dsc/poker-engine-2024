@@ -2,10 +2,12 @@ FROM python:3.12-alpine
 
 WORKDIR /usr/src/app
 
-RUN apk add --no-cache gcc musl-dev python3-dev libffi-dev && pip install --no-cache-dir Cython
+ENV VIRTUAL_ENV=/usr/local
+ADD --chmod=755 https://astral.sh/uv/install.sh /install.sh
+RUN /install.sh && rm /install.sh
 
 COPY engine/requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
+RUN /root/.cargo/bin/uv pip install --no-cache-dir -r requirements.txt
 
 COPY engine/ ./engine/
 
