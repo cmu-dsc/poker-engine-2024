@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package pokerbot;
+
+service PokerBotService {
+  rpc CheckReady(ReadyCheckRequest) returns (ReadyCheckResponse) {}
+
+  rpc RequestAction(ActionRequest) returns (ActionResponse) {}
+
+  rpc EndGame(EndGameRequest) returns (EndGameResponse) {}
+}
+
+message ReadyCheckRequest {
+  string player_name = 1;
+}
+
+message ReadyCheckResponse {
+  bool ready = 1;
+}
+
+enum ActionType {
+  FOLD = 0;
+  CALL = 1;
+  CHECK = 2;
+  RAISE = 3;
+}
+
+message ActionRequest {
+  string player_name = 1;
+  float game_clock = 2;
+  int64 bankroll = 3;
+  int64 amount = 4; // Used if the action is RAISE
+}
+
+message ActionResponse {
+  ActionType action = 1;
+  int64 amount = 2; // Relevant for RAISE actions
+}
+
+message EndGameRequest {
+  string player_name = 1;
+}
+
+message EndGameResponse {
+  bool ack = 1;
+}
