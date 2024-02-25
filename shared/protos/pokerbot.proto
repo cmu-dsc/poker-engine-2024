@@ -18,6 +18,11 @@ message ReadyCheckResponse {
   bool ready = 1;
 }
 
+message Card {
+  string rank = 1;
+  string suit = 2;
+}
+
 enum ActionType {
   FOLD = 0;
   CALL = 1;
@@ -27,14 +32,21 @@ enum ActionType {
 
 message ActionRequest {
   string player_name = 1;
-  float game_clock = 2;
-  int64 bankroll = 3;
-  int64 amount = 4; // Used if the action is RAISE
+  int32 street = 2;
+  repeated Card my_cards = 3;
+  repeated Card board_cards = 4;
+  int64 my_stack = 5;
+  int64 pot_size = 6;
+  int64 continue_cost = 7;
+  int64 min_raise = 8;
+  int64 max_raise = 9;
+  float game_clock = 10;
+  int64 bankroll = 11;
 }
 
 message ActionResponse {
   ActionType action = 1;
-  int64 amount = 2; // Relevant for RAISE actions
+  int64 amount = 2;  // Relevant for RAISE actions, must be between min_raise and max_raise
 }
 
 message EndGameRequest {

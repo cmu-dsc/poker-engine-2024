@@ -227,11 +227,31 @@ class Player:
 
     def query(self, round_state: RoundState, game_log: List[str]) -> Action:
         """
-        Requests one action from the pokerbot over gRPC
+        Requests one action from the pokerbot over gRPC.
         """
+        my_cards = [
+            Card(rank=str(card.rank), suit=str(card.suit))
+            for card in round_state.hands[self.player_index]
+        ]
+        board_cards = [
+            Card(rank=str(card.rank), suit=str(card.suit))
+            for card in round_state.deck[: round_state.street]
+        ]
+
+        pot_size = sum(round_state.pips)
+
         request = ActionRequest(
             player_name=self.name,
-            game_clock=round_state.game_clock,
+            street=round_state.street,
+            my_cards=my_cards,
+            board_cards=board_cards,
+            my_stack=round_state.stacks[self.player_index],
+            pot_size=pot_size,
+            continue_cost=round_state.pips[1 - self.player_index]
+            - round_state.pips[self.player_index],
+            min_raise=round_state.raise_bounds()[0],
+            max_raise=round_state.raise_bounds()[1],
+            game_clock=self.game_clock,
             bankroll=self.bankroll,
         )
 

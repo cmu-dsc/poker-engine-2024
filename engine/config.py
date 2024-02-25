@@ -27,11 +27,11 @@ STARTING_STACK = 400
 BIG_BLIND = 2
 SMALL_BLIND = 1
 
-S3_BUCKET_NAME = os.getenv("S3_BUCKET_NAME")
-
 
 def upload_log_to_s3(log_filename):
     """Uploads a log file to S3 if a bucket name is configured."""
+    S3_BUCKET_NAME = os.getenv("S3_BUCKET_NAME")
+
     if S3_BUCKET_NAME:
         s3 = boto3.client("s3")
         try:
