@@ -2,27 +2,8 @@
 CMU Poker Bot Competition Game Engine 2024
 """
 
-"""
-the deck consists of 18 cards, ranked 1 to 6, with 3 suits.
-
-each player is dealt 1 card preflop. A round of betting occurs.
-
-there is a flop, of 1 card. A round of betting occurs.
-
-there is a river, of 1 card. A round of betting occurs.
-
-The hand rankings involve 3 cards:
-trips (6 combos)
-straight flush (12 combos)
-flush (48 combos)
-straight (96 combos)
-pair (270 combos)
-high card (384 combos)
-TOTAL: 816 combos
-"""
 import json
 import os
-import random
 import socket
 import subprocess
 import time
@@ -31,9 +12,7 @@ from queue import Queue
 from threading import Thread
 from typing import List, Optional, Set, Type, Union
 
-import eval7
-from evaluate import evaluate
-
+from evaluate import evaluate, ShortDeck
 from config import *
 
 FoldAction = namedtuple("FoldAction", [])
@@ -70,29 +49,6 @@ STATUS = lambda players: "".join([PVALUE(p.name, p.bankroll) for p in players])
 # The engine expects a response of K at the end of the round as an ack,
 # otherwise a response which encodes the player's action.
 # Action history is sent once, including the player's actions.
-
-
-class ShortDeck:
-    """Custom deck for the poker variant with cards ranked 1 to 6 across 3 suits."""
-
-    def __init__(self):
-        card_ranks = "234567"
-        card_suits = "shd"  # spades, hearts, diamonds
-        self.cards = [
-            eval7.Card(rank + suit) for suit in card_suits for rank in card_ranks
-        ]
-
-    def shuffle(self):
-        """Shuffles the deck."""
-        random.shuffle(self.cards)
-
-    def deal(self, n):
-        """Deals n cards from the deck."""
-        return [self.cards.pop() for _ in range(n)]
-
-    def peek(self, n):
-        """Peeks at the top n cards of the deck without removing them."""
-        return self.cards[:n]
 
 
 class RoundState(

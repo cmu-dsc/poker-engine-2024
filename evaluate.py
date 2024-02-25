@@ -1,5 +1,48 @@
+"""
+the deck consists of 18 cards, ranked 1 to 6, with 3 suits.
+
+each player is dealt 1 card preflop. A round of betting occurs.
+
+there is a flop, of 1 card. A round of betting occurs.
+
+there is a river, of 1 card. A round of betting occurs.
+
+The hand rankings involve 3 cards:
+trips (6 combos)
+straight flush (12 combos)
+flush (48 combos)
+straight (96 combos)
+pair (270 combos)
+high card (384 combos)
+TOTAL: 816 combos
+"""
+
+from random import random
 from typing import List
 import eval7
+
+
+class ShortDeck:
+    """Custom deck for the poker variant with cards ranked 1 to 6 across 3 suits."""
+
+    def __init__(self):
+        card_ranks = "234567"
+        card_suits = "shd"  # spades, hearts, diamonds
+        self.cards = [
+            eval7.Card(rank + suit) for suit in card_suits for rank in card_ranks
+        ]
+
+    def shuffle(self):
+        """Shuffles the deck."""
+        random.shuffle(self.cards)
+
+    def deal(self, n):
+        """Deals n cards from the deck."""
+        return [self.cards.pop() for _ in range(n)]
+
+    def peek(self, n):
+        """Peeks at the top n cards of the deck without removing them."""
+        return self.cards[:n]
 
 
 def is_trips(hand: List[eval7.Card]) -> bool:
