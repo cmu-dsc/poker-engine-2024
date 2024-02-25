@@ -6,8 +6,13 @@ import grpc
 from collections import namedtuple
 from typing import List, Optional, Set, Type, Union
 
-from pokerbot_pb2_grpc import PokerBotServiceStub
-from pokerbot_pb2 import ReadyCheckRequest, ActionRequest, EndGameRequest, ActionType
+from shared.pokerbot_pb2_grpc import PokerBotServiceStub
+from shared.pokerbot_pb2 import (
+    ReadyCheckRequest,
+    ActionRequest,
+    EndGameRequest,
+    ActionType,
+)
 from evaluate import evaluate, ShortDeck
 from config import *
 
@@ -23,26 +28,6 @@ CCARDS = lambda cards: ",".join(map(str, cards))
 PCARDS = lambda cards: "[{}]".format(" ".join(map(str, cards)))
 PVALUE = lambda name, value: ", {} ({})".format(name, value)
 STATUS = lambda players: "".join([PVALUE(p.name, p.bankroll) for p in players])
-
-# Socket encoding scheme:
-#
-# T#.### - the player's game clock
-# P# - the player's index
-# H**,** - the player's hand in common format
-# F - a fold action in the round history
-# C - a call action in the round history
-# K - a check action in the round history
-# R### - a raise action in the round history
-# B**,**,**,**,** - the board cards in common format
-# O**,** - the opponent's hand in common format
-# D### - the player's bankroll delta from the round
-# Q - game over
-#
-# Clauses are separated by spaces.
-# Messages end with '\n'.
-# The engine expects a response of K at the end of the round as an ack,
-# otherwise a response which encodes the player's action.
-# Action history is sent once, including the player's actions.
 
 
 class RoundState(
@@ -422,11 +407,17 @@ class Game:
         for player in players:
             player.reset
 
-        # this needs to be uploaded to S3
-        log_filename = GAME_LOG_FILENAME + ".txt"
+        log_filename = f"{GAME_LOG_FILENAME}.txt"
+        log_index = 1
+        while os.path.exists(log_filename):
+            log_filename = f"{GAME_LOG_FILENAME}_{log_index}.txt"
+            log_index += 1
+
         print(f"Writing {log_filename}")
         with open(log_filename, "w") as log_file:
             log_file.write("\n".join(self.log))
+
+        upload_log_to_s3(log_filename)
 
 
 if __name__ == "__main__":
