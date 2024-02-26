@@ -21,8 +21,8 @@ message ActionHistory {
   int64 amount = 2; // Relevant for RAISE actions, otherwise 0
 }
 
-// Sent at the beginning of each round to set the state for each player.
-message StartRoundMessage {
+// Sent at the beginning of each phase to set the state for each player.
+message StartPhaseMessage {
   float game_clock = 1;
   int32 player_index = 2;
   repeated Card player_hand = 3;
@@ -40,11 +40,11 @@ message ActionResponse {
   int64 amount = 2; // Amount for RAISE actions
 }
 
-// Sent at the end of a match, revealing the opponent's hand and the result.
-message EndMatchMessage {
+// Sent at the end of a round, revealing the opponent's hand and the result.
+message EndRoundMessage {
   repeated Card opponent_hand = 1;
   int64 bankroll_delta = 2; // Change in the player's bankroll after the match
-  bool is_game_over = 3; // Indicates if the session is over
+  bool is_match_over = 3; // Indicates if the session is over
 }
 
 // Checks if the bot is ready to start or continue the game.
@@ -59,7 +59,7 @@ message ReadyCheckResponse {
 // Service definition for interactions between the game engine (client) and the poker bot (server).
 service PokerBotService {
   rpc ReadyCheck (ReadyCheckRequest) returns (ReadyCheckResponse) {}
-  rpc StartRound (StartRoundMessage) returns (ActionResponse) {} // Initial call to start the round, expecting an immediate action or pass
+  rpc StartPhase (StartPhaseMessage) returns (ActionResponse) {} // Initial call to start the round, expecting an immediate action or pass
   rpc RequestAction (ActionRequest) returns (ActionResponse) {} // Subsequent calls for actions within the round
-  rpc EndMatch (EndMatchMessage) returns (ReadyCheckResponse) {} // Signals the end of a match, optionally using ReadyCheckResponse to immediately check readiness for the next match
+  rpc EndRound (EndRoundMessage) returns (ReadyCheckResponse) {} // Signals the end of a match, optionally using ReadyCheckResponse to immediately check readiness for the next match
 }

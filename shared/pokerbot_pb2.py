@@ -14,29 +14,31 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0epokerbot.proto\x12\x08pokerbot\"(\n\x11ReadyCheckRequest\x12\x13\n\x0bplayer_name\x18\x01 \x01(\t\"#\n\x12ReadyCheckResponse\x12\r\n\x05ready\x18\x01 \x01(\x08\"\"\n\x04\x43\x61rd\x12\x0c\n\x04rank\x18\x01 \x01(\t\x12\x0c\n\x04suit\x18\x02 \x01(\t\"\x82\x02\n\rActionRequest\x12\x13\n\x0bplayer_name\x18\x01 \x01(\t\x12\x0e\n\x06street\x18\x02 \x01(\x05\x12 \n\x08my_cards\x18\x03 \x03(\x0b\x32\x0e.pokerbot.Card\x12#\n\x0b\x62oard_cards\x18\x04 \x03(\x0b\x32\x0e.pokerbot.Card\x12\x10\n\x08my_stack\x18\x05 \x01(\x03\x12\x10\n\x08pot_size\x18\x06 \x01(\x03\x12\x15\n\rcontinue_cost\x18\x07 \x01(\x03\x12\x11\n\tmin_raise\x18\x08 \x01(\x03\x12\x11\n\tmax_raise\x18\t \x01(\x03\x12\x12\n\ngame_clock\x18\n \x01(\x02\x12\x10\n\x08\x62\x61nkroll\x18\x0b \x01(\x03\"F\n\x0e\x41\x63tionResponse\x12$\n\x06\x61\x63tion\x18\x01 \x01(\x0e\x32\x14.pokerbot.ActionType\x12\x0e\n\x06\x61mount\x18\x02 \x01(\x03\"%\n\x0e\x45ndGameRequest\x12\x13\n\x0bplayer_name\x18\x01 \x01(\t\"\x1e\n\x0f\x45ndGameResponse\x12\x0b\n\x03\x61\x63k\x18\x01 \x01(\x08*6\n\nActionType\x12\x08\n\x04\x46OLD\x10\x00\x12\x08\n\x04\x43\x41LL\x10\x01\x12\t\n\x05\x43HECK\x10\x02\x12\t\n\x05RAISE\x10\x03\x32\xe4\x01\n\x0fPokerBotService\x12I\n\nCheckReady\x12\x1b.pokerbot.ReadyCheckRequest\x1a\x1c.pokerbot.ReadyCheckResponse\"\x00\x12\x44\n\rRequestAction\x12\x17.pokerbot.ActionRequest\x1a\x18.pokerbot.ActionResponse\"\x00\x12@\n\x07\x45ndGame\x12\x18.pokerbot.EndGameRequest\x1a\x19.pokerbot.EndGameResponse\"\x00\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0epokerbot.proto\x12\x08pokerbot\"\x15\n\x04\x43\x61rd\x12\r\n\x05value\x18\x01 \x01(\t\"E\n\rActionHistory\x12$\n\x06\x61\x63tion\x18\x01 \x01(\x0e\x32\x14.pokerbot.ActionType\x12\x0e\n\x06\x61mount\x18\x02 \x01(\x03\"\x87\x01\n\x11StartPhaseMessage\x12\x12\n\ngame_clock\x18\x01 \x01(\x02\x12\x14\n\x0cplayer_index\x18\x02 \x01(\x05\x12#\n\x0bplayer_hand\x18\x03 \x03(\x0b\x32\x0e.pokerbot.Card\x12#\n\x0b\x62oard_cards\x18\x04 \x03(\x0b\x32\x0e.pokerbot.Card\"R\n\rActionRequest\x12\x31\n\x0blast_action\x18\x01 \x01(\x0b\x32\x17.pokerbot.ActionHistoryH\x00\x88\x01\x01\x42\x0e\n\x0c_last_action\"F\n\x0e\x41\x63tionResponse\x12$\n\x06\x61\x63tion\x18\x01 \x01(\x0e\x32\x14.pokerbot.ActionType\x12\x0e\n\x06\x61mount\x18\x02 \x01(\x03\"g\n\x0f\x45ndRoundMessage\x12%\n\ropponent_hand\x18\x01 \x03(\x0b\x32\x0e.pokerbot.Card\x12\x16\n\x0e\x62\x61nkroll_delta\x18\x02 \x01(\x03\x12\x15\n\ris_match_over\x18\x03 \x01(\x08\"\x13\n\x11ReadyCheckRequest\"#\n\x12ReadyCheckResponse\x12\r\n\x05ready\x18\x01 \x01(\x08*6\n\nActionType\x12\x08\n\x04\x46OLD\x10\x00\x12\x08\n\x04\x43\x41LL\x10\x01\x12\t\n\x05\x43HECK\x10\x02\x12\t\n\x05RAISE\x10\x03\x32\xb0\x02\n\x0fPokerBotService\x12I\n\nReadyCheck\x12\x1b.pokerbot.ReadyCheckRequest\x1a\x1c.pokerbot.ReadyCheckResponse\"\x00\x12\x45\n\nStartPhase\x12\x1b.pokerbot.StartPhaseMessage\x1a\x18.pokerbot.ActionResponse\"\x00\x12\x44\n\rRequestAction\x12\x17.pokerbot.ActionRequest\x1a\x18.pokerbot.ActionResponse\"\x00\x12\x45\n\x08\x45ndRound\x12\x19.pokerbot.EndRoundMessage\x1a\x1c.pokerbot.ReadyCheckResponse\"\x00\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'pokerbot_pb2', _globals)
 if _descriptor._USE_C_DESCRIPTORS == False:
   DESCRIPTOR._options = None
-  _globals['_ACTIONTYPE']._serialized_start=547
-  _globals['_ACTIONTYPE']._serialized_end=601
-  _globals['_READYCHECKREQUEST']._serialized_start=28
-  _globals['_READYCHECKREQUEST']._serialized_end=68
-  _globals['_READYCHECKRESPONSE']._serialized_start=70
-  _globals['_READYCHECKRESPONSE']._serialized_end=105
-  _globals['_CARD']._serialized_start=107
-  _globals['_CARD']._serialized_end=141
-  _globals['_ACTIONREQUEST']._serialized_start=144
-  _globals['_ACTIONREQUEST']._serialized_end=402
-  _globals['_ACTIONRESPONSE']._serialized_start=404
-  _globals['_ACTIONRESPONSE']._serialized_end=474
-  _globals['_ENDGAMEREQUEST']._serialized_start=476
-  _globals['_ENDGAMEREQUEST']._serialized_end=513
-  _globals['_ENDGAMERESPONSE']._serialized_start=515
-  _globals['_ENDGAMERESPONSE']._serialized_end=545
-  _globals['_POKERBOTSERVICE']._serialized_start=604
-  _globals['_POKERBOTSERVICE']._serialized_end=832
+  _globals['_ACTIONTYPE']._serialized_start=579
+  _globals['_ACTIONTYPE']._serialized_end=633
+  _globals['_CARD']._serialized_start=28
+  _globals['_CARD']._serialized_end=49
+  _globals['_ACTIONHISTORY']._serialized_start=51
+  _globals['_ACTIONHISTORY']._serialized_end=120
+  _globals['_STARTPHASEMESSAGE']._serialized_start=123
+  _globals['_STARTPHASEMESSAGE']._serialized_end=258
+  _globals['_ACTIONREQUEST']._serialized_start=260
+  _globals['_ACTIONREQUEST']._serialized_end=342
+  _globals['_ACTIONRESPONSE']._serialized_start=344
+  _globals['_ACTIONRESPONSE']._serialized_end=414
+  _globals['_ENDROUNDMESSAGE']._serialized_start=416
+  _globals['_ENDROUNDMESSAGE']._serialized_end=519
+  _globals['_READYCHECKREQUEST']._serialized_start=521
+  _globals['_READYCHECKREQUEST']._serialized_end=540
+  _globals['_READYCHECKRESPONSE']._serialized_start=542
+  _globals['_READYCHECKRESPONSE']._serialized_end=577
+  _globals['_POKERBOTSERVICE']._serialized_start=636
+  _globals['_POKERBOTSERVICE']._serialized_end=940
 # @@protoc_insertion_point(module_scope)
