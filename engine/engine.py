@@ -3,15 +3,16 @@ CMU Poker Bot Competition Game Engine 2024
 """
 
 import grpc
-from collections import namedtuple
-from typing import List, Optional, Set, Type, Union
+from collections import namedtuple, deque
+from typing import Deque, List, Optional, Set, Type, Union
 
-from shared.pokerbot_pb2_grpc import PokerBotServiceStub
+from shared.pokerbot_pb2_grpc import PokerBotStub
 from shared.pokerbot_pb2 import (
     ReadyCheckRequest,
     ActionRequest,
-    EndGameRequest,
+    EndRoundMessage,
     ActionType,
+    Action as ProtoAction,
 )
 from evaluate import evaluate, ShortDeck
 from config import *
@@ -110,7 +111,7 @@ class RoundState(
         new_hands = self.hands
         if new_street in [1, 2]:  # Dealing a card for flop and river
             for i in range(len(new_hands)):
-                new_hands[i].append(self.deck.pop())
+                new_hands[i].append(self.deck.deal(1))
 
         return RoundState(
             button=1 - self.button,  # Switching the dealer button
@@ -190,92 +191,156 @@ class Player:
     def __init__(
         self, name: str, service_dns_name: str, auth_token: Optional[str] = None
     ) -> None:
+        """
+        Initializes a new Player instance.
+
+        Args:
+            name (str): The name of the player.
+            service_dns_name (str): The DNS name of the service for gRPC communication.
+            auth_token (Optional[str]): An optional authentication token for secure communication.
+        """
         self.name: str = name
         self.service_dns_name: str = service_dns_name
         self.auth_token: Optional[str] = auth_token
         self.game_clock: float = STARTING_GAME_CLOCK
         self.bankroll: int = 0
 
-    def run(self) -> None:
-        """
-        Establishes a gRPC connection to the pokerbot and checks if it's ready.
-        """
-        # Assuming TLS/SSL is not required for internal communication
-        channel = grpc.insecure_channel(self.service_dns_name)
+        self.channel = grpc.insecure_channel(self.service_dns_name)
+        self.stub = PokerBotStub(self.channel)
 
-        self.bot_stub = PokerBotServiceStub(channel)
+    def check_ready(self, player_names: List[str]) -> bool:
+        """
+        Checks if the pokerbot is ready to start or continue the game.
 
-        request = ReadyCheckRequest(player_name=self.name)
+        Args:
+            player_names (List[str]): A list of player names participating in the game.
+
+        Returns:
+            bool: True if the bot is ready, False otherwise.
+        """
+        timeout: float = 5.0
+        request = ReadyCheckRequest(player_names=player_names)
 
         try:
-            response = self.bot_stub.CheckReady(request, timeout=10)
-            print(f"Bot {self.name} is ready: {response.ready}")
+            response = self.stub.ReadyCheck(request, timeout=timeout)
+            return response.ready
         except grpc.RpcError as e:
-            print(f"Failed to communicate with bot {self.name}: {e.status()}")
+            print(f"An error occurred: {e}")
+            return False
 
-    def reset(self) -> None:
+    def request_action(
+        self, player_hand: List[str], board_cards: List[str], new_actions: Deque[Action]
+    ) -> Optional[Action]:
         """
-        Notifies the bot that the game has ended and its state should be reset for a new game.
-        """
-        try:
-            response = self.bot_stub.EndGame(
-                EndGameRequest(player_name=self.name), timeout=5
-            )
-            print(f"Bot {self.name} reset successful: {response.ack}")
-        except grpc.RpcError as e:
-            print(f"Failed to reset bot {self.name}: {e.code()}")
+        Requests an action from the pokerbot based on the current game state.
 
-    def query(self, round_state: RoundState, game_log: List[str]) -> Action:
-        """
-        Requests one action from the pokerbot over gRPC.
-        """
-        my_cards = [
-            Card(rank=str(card.rank), suit=str(card.suit))
-            for card in round_state.hands[self.player_index]
-        ]
-        board_cards = [
-            Card(rank=str(card.rank), suit=str(card.suit))
-            for card in round_state.deck[: round_state.street]
-        ]
+        Args:
+            player_hand (List[str]): The cards currently held by the player.
+            board_cards (List[str]): The cards visible on the board.
+            new_actions (Deque[Action]): A deque of actions taken since the last request.
 
-        pot_size = sum(round_state.pips)
+        Returns:
+            Optional[Action]: The action decided by the pokerbot, or None if an error occurred.
+        """
+        timeout: float = 5.0
+        proto_actions = self._convert_actions_to_proto(new_actions)
 
         request = ActionRequest(
-            player_name=self.name,
-            street=round_state.street,
-            my_cards=my_cards,
-            board_cards=board_cards,
-            my_stack=round_state.stacks[self.player_index],
-            pot_size=pot_size,
-            continue_cost=round_state.pips[1 - self.player_index]
-            - round_state.pips[self.player_index],
-            min_raise=round_state.raise_bounds()[0],
-            max_raise=round_state.raise_bounds()[1],
             game_clock=self.game_clock,
-            bankroll=self.bankroll,
+            player_hand=player_hand,
+            board_cards=board_cards,
+            new_actions=proto_actions,
         )
 
         try:
-            response = self.bot_stub.RequestAction(request, timeout=10)
-
-            if response.action == ActionType.FOLD:
-                return FoldAction()
-            elif response.action == ActionType.CALL:
-                return CallAction()
-            elif response.action == ActionType.CHECK:
-                return CheckAction()
-            elif response.action == ActionType.RAISE:
-                min_raise, max_raise = round_state.raise_bounds()
-                if min_raise <= response.amount <= max_raise:
-                    return RaiseAction(response.amount)
-                else:
-                    # Handle illegal raise amount
-                    return FoldAction()  # Or another default action
+            response = self.stub.RequestAction(request, timeout=timeout)
+            return self._convert_proto_to_action(response.action)
         except grpc.RpcError as e:
-            error_message = f"Failed to query action from bot {self.name}: {e.code()}"
-            game_log.append(error_message)
-            print(error_message)
-            return FoldAction()  # Default action on communication error
+            print(f"An error occurred: {e}")
+            return None
+
+    def end_round(
+        self, opponent_hands: List[str], new_actions: Deque[Action], is_match_over: bool
+    ) -> None:
+        """
+        Signals the end of a round to the pokerbot, including the final state of the game.
+
+        Args:
+            opponent_hands (List[str]): The final hands of the opponents.
+            new_actions (Deque[Action]): Any actions that occurred after the last action request.
+            is_match_over (bool): Indicates whether the match has concluded.
+        """
+        timeout: float = 5.0
+        proto_actions = self._convert_actions_to_proto(new_actions)
+
+        end_round_message = EndRoundMessage(
+            opponent_hand=opponent_hands,
+            new_actions=proto_actions,
+            is_match_over=is_match_over,
+        )
+
+        try:
+            self.stub.EndRound(end_round_message, timeout=timeout)
+        except grpc.RpcError as e:
+            print(f"An error occurred: {e}")
+
+    def _convert_actions_to_proto(self, actions: Deque[Action]) -> List[ProtoAction]:
+        """
+        Converts a deque of Action objects to a list of protobuf Action messages.
+
+        Args:
+            actions (Deque[Action]): The actions to convert.
+
+        Returns:
+            List[ProtoAction]: The list of converted protobuf Action messages.
+        """
+        proto_actions = []
+        for action in list(actions):
+            proto_action = self._convert_action_to_proto(action)
+            if proto_action:
+                proto_actions.append(proto_action)
+        return proto_actions
+
+    def _convert_actions_to_proto(self, actions: Deque[Action]) -> List[ProtoAction]:
+        """
+        Converts and clears actions from a deque of Action objects to a list of protobuf Action messages.
+
+        This method consumes the `actions` deque, ensuring that each action is only processed once
+        and the deque is empty after conversion.
+
+        Args:
+            actions (Deque[Action]): The actions to convert and clear.
+
+        Returns:
+            List[ProtoAction]: The list of converted protobuf Action messages.
+        """
+        proto_actions = []
+        while actions:
+            action = actions.popleft()
+            proto_action = self._convert_action_to_proto(action)
+            if proto_action:
+                proto_actions.append(proto_action)
+        return proto_actions
+
+    def _convert_proto_to_action(self, proto_action: ProtoAction) -> Optional[Action]:
+        """
+        Converts a protobuf Action message back to a Python-native Action object.
+
+        Args:
+            proto_action (ProtoAction): The protobuf Action message to convert.
+
+        Returns:
+            Optional[Action]: The converted Python-native Action object, or None if conversion is not possible.
+        """
+        if proto_action.action == ActionType.FOLD:
+            return FoldAction()
+        elif proto_action.action == ActionType.CALL:
+            return CallAction()
+        elif proto_action.action == ActionType.CHECK:
+            return CheckAction()
+        elif proto_action.action == ActionType.RAISE:
+            return RaiseAction(amount=proto_action.amount)
+        return None
 
 
 class Game:
@@ -284,149 +349,95 @@ class Game:
     """
 
     def __init__(self) -> None:
-        self.log = [f"CMU Poker Bot Game - {PLAYER_1_NAME} vs {PLAYER_2_NAME}"]
-        self.player_messages = [[], []]
-        self.preflop_bets = {PLAYER_1_NAME: 0, PLAYER_2_NAME: 0}
-        self.flop_bets = {PLAYER_1_NAME: 0, PLAYER_2_NAME: 0}
-        self.river_bets = {PLAYER_1_NAME: 0, PLAYER_2_NAME: 0}
-        # EV bets tracking, if necessary
+        self.players: List[Player] = []
+        self.log: List[str] = [
+            f"CMU Poker Bot Game - {PLAYER_1_NAME} vs {PLAYER_2_NAME}"
+        ]
+        self.new_actions: List[List[Action]] = [[], []]
 
-    def log_round_state(self, players: List[Player], round_state: RoundState) -> None:
+    def log_round_state(self, round_state) -> None:
         """
-        Incorporates RoundState information into the game log and player messages.
+        Logs the current state of the round.
         """
-        if round_state.street == 0:  # Pre-flop
-            self.log.append(f"{players[0].name} posts the blind of {SMALL_BLIND}")
-            self.log.append(f"{players[1].name} posts the blind of {BIG_BLIND}")
-            self.log.append(f"{players[0].name} dealt {PCARDS(round_state.hands[0])}")
-            self.log.append(f"{players[1].name} dealt {PCARDS(round_state.hands[1])}")
-            self.player_messages[0] = ["T0.", "P0", "H" + CCARDS(round_state.hands[0])]
-            self.player_messages[1] = ["T0.", "P1", "H" + CCARDS(round_state.hands[1])]
-        elif round_state.street == 1:  # Flop
-            flop_card = round_state.deck.peek(1)
-            self.log.append(f"Flop {PCARDS(flop_card)}")
-            compressed_flop = "B" + CCARDS(flop_card)
-            self.player_messages[0].append(compressed_flop)
-            self.player_messages[1].append(compressed_flop)
-        elif round_state.street == 2:  # River
-            river_card = round_state.deck.peek(1)
-            self.log.append(f"River {PCARDS(river_card)}")
-            compressed_river = "B" + CCARDS(river_card)
-            self.player_messages[0].append(compressed_river)
-            self.player_messages[1].append(compressed_river)
+        # Implementation...
 
-        self.log.append(
-            f"Bets: {self.preflop_bets[players[0].name]}, {self.preflop_bets[players[1].name]}"
-        )
-        self.log.append(f"Stacks: {round_state.stacks[0]}, {round_state.stacks[1]}")
-
-    def log_action(self, name: str, action: Action, bet_override: bool) -> None:
+    def log_action(self, player_name: str, action, is_preflop: bool) -> None:
         """
-        Incorporates action information into the game log.
+        Logs an action taken by a player.
         """
-        if isinstance(action, FoldAction):
-            phrasing = " folds"
-        elif isinstance(action, CallAction):
-            phrasing = " calls"
-        elif isinstance(action, CheckAction):
-            phrasing = " checks"
-        elif isinstance(action, RaiseAction):
-            phrasing = (" bets " if bet_override else " raises to ") + str(
-                action.amount
-            )
-        else:
-            raise ValueError("Unrecognized action type")
+        # Implementation...
+        self.player_messages.append((player_name, action, is_preflop))
 
-        self.log.append(f"{name}{phrasing}")
-
-    def log_terminal_state(
-        self, players: List[Player], round_state: TerminalState
-    ) -> None:
+    def log_terminal_state(self, round_state) -> None:
         """
-        Incorporates TerminalState information into the game log and player messages.
+        Logs the terminal state of a round, including outcomes.
         """
-        previous_state = round_state.previous_state
-        if previous_state is None:
-            return
-        if FoldAction not in previous_state.legal_actions():
-            # If the round didn't end in a fold, log the hands shown
-            self.log.append(
-                f"{players[0].name} shows {PCARDS(previous_state.hands[0])}"
-            )
-            self.log.append(
-                f"{players[1].name} shows {PCARDS(previous_state.hands[1])}"
-            )
-            self.player_messages[0].append("O" + CCARDS(previous_state.hands[1]))
-            self.player_messages[1].append("O" + CCARDS(previous_state.hands[0]))
+        # Implementation...
 
-        # Log the deltas (amounts won or lost)
-        self.log.append(f"{players[0].name} awarded {round_state.deltas[0]}")
-        self.log.append(f"{players[1].name} awarded {round_state.deltas[1]}")
-
-        # Append deltas to player messages
-        self.player_messages[0].append("D" + str(round_state.deltas[0]))
-        self.player_messages[1].append("D" + str(round_state.deltas[1]))
-
-    def run_round(self, players: List[Player]) -> None:
+    def run_round(self, last_round: bool) -> None:
         """
         Runs one round of poker (1 hand).
         """
         deck = ShortDeck()
         deck.shuffle()
-
         hands = [deck.deal(1), deck.deal(1)]
+        board = []
         pips = [SMALL_BLIND, BIG_BLIND]
         stacks = [STARTING_STACK - SMALL_BLIND, STARTING_STACK - BIG_BLIND]
 
         round_state = RoundState(0, 0, pips, stacks, hands, deck, None)
-
-        self.preflop_bets = {players[0].name: SMALL_BLIND, players[1].name: BIG_BLIND}
+        self.new_actions = [[], []]
 
         while not isinstance(round_state, TerminalState):
-            self.log_round_state(players, round_state)
+            self.log_round_state(RoundState)
             active = round_state.button % 2
-            player = players[active]
+            player = self.players[active]
+            action = player.request_action(
+                hands[active], board, self.new_actions[active]
+            )
+            # deal, bets for small blind, etc.
+            # send start phase to bots
+            # loop through players:
+            # action request with previous players action if it exists
+            # validate action, otherwise fold
+            # add action to action_history
+            # log action
+            round_state = round_state.proceed()
 
-            action = player.query(round_state, self.log)
-            self.log_action(player.name, action, round_state.pips == [0, 0])
-
-            round_state = round_state.proceed(action)
-
-        self.log_terminal_state(players, round_state)
-
-        for player, delta in zip(players, round_state.deltas):
+        for player, delta in zip(self.players, delta):
+            player.end_round(last_round)
             player.bankroll += delta
+        self.log_terminal_state(round_state)
 
-    def run(self) -> None:
+        # After round ends, log actions
+        for action in self.action_history:
+            self.log.append(f"Action taken: {action}")
+
+    def run_match(self) -> None:
         """
         Runs one game of poker.
         """
-        print("   _____ __  __ _    _   _____      _             ")
-        print("  / ____|  \/  | |  | | |  __ \    | |            ")
-        print(" | |    | \  / | |  | | | |__) |__ | | _____ _ __ ")
-        print(" | |    | |\/| | |  | | |  ___/ _ \| |/ / _ \ '__|")
-        print(" | |____| |  | | |__| | | |  | (_) |   <  __/ |   ")
-        print("  \_____|_|  |_|\____/  |_|   \___/|_|\_\___|_|   ")
-        print()
         print("Starting the Poker Game...")
-
-        players = [
+        self.players = [
             Player(PLAYER_1_NAME, PLAYER_1_DNS),
             Player(PLAYER_2_NAME, PLAYER_2_DNS),
         ]
 
-        for player in players:
-            player.run()
+        if not all(player.check_ready() for player in self.players):
+            print("One or more bots are not ready. Aborting the match.")
+            return
 
         for round_num in range(1, NUM_ROUNDS + 1):
-            self.log.append(f"\nRound #{round_num} {STATUS(players)}")
-            self.run_round(players)
-            players = players[::-1]  # Alternate the dealer
+            self.log.append(f"\nRound #{round_num}")
+            self.run_round(self.players, round_num == NUM_ROUNDS)
+            self.players = self.players[::-1]  # Alternate the dealer
 
-        self.log.append("\nFinal" + STATUS(players))
-        for player in players:
-            player.reset
+        self.finalize_log()
 
+    def finalize_log(self) -> None:
+        """
+        Finalizes the game log, writing it to a file and uploading it.
+        """
         log_filename = f"{GAME_LOG_FILENAME}.txt"
         log_index = 1
         while os.path.exists(log_filename):
@@ -437,8 +448,9 @@ class Game:
         with open(log_filename, "w") as log_file:
             log_file.write("\n".join(self.log))
 
-        upload_log_to_s3(log_filename)
+        # Placeholder for uploading log, adjust as necessary
+        # upload_log_to_s3(log_filename)
 
 
 if __name__ == "__main__":
-    Game().run()
+    Game().run_match()

@@ -2,12 +2,12 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
+from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
 import pokerbot_pb2 as pokerbot__pb2
 
 
-class PokerBotServiceStub(object):
-    """Service definition for interactions between the game engine (client) and the poker bot (server).
-    """
+class PokerBotStub(object):
+    """Missing associated documentation comment in .proto file."""
 
     def __init__(self, channel):
         """Constructor.
@@ -16,67 +16,53 @@ class PokerBotServiceStub(object):
             channel: A grpc.Channel.
         """
         self.ReadyCheck = channel.unary_unary(
-                '/pokerbot.PokerBotService/ReadyCheck',
+                '/poker.PokerBot/ReadyCheck',
                 request_serializer=pokerbot__pb2.ReadyCheckRequest.SerializeToString,
                 response_deserializer=pokerbot__pb2.ReadyCheckResponse.FromString,
                 )
-        self.StartPhase = channel.unary_unary(
-                '/pokerbot.PokerBotService/StartPhase',
-                request_serializer=pokerbot__pb2.StartPhaseMessage.SerializeToString,
-                response_deserializer=pokerbot__pb2.ActionResponse.FromString,
-                )
         self.RequestAction = channel.unary_unary(
-                '/pokerbot.PokerBotService/RequestAction',
+                '/poker.PokerBot/RequestAction',
                 request_serializer=pokerbot__pb2.ActionRequest.SerializeToString,
                 response_deserializer=pokerbot__pb2.ActionResponse.FromString,
                 )
         self.EndRound = channel.unary_unary(
-                '/pokerbot.PokerBotService/EndRound',
+                '/poker.PokerBot/EndRound',
                 request_serializer=pokerbot__pb2.EndRoundMessage.SerializeToString,
-                response_deserializer=pokerbot__pb2.ReadyCheckResponse.FromString,
+                response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
                 )
 
 
-class PokerBotServiceServicer(object):
-    """Service definition for interactions between the game engine (client) and the poker bot (server).
-    """
+class PokerBotServicer(object):
+    """Missing associated documentation comment in .proto file."""
 
     def ReadyCheck(self, request, context):
-        """Missing associated documentation comment in .proto file."""
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
-    def StartPhase(self, request, context):
-        """Missing associated documentation comment in .proto file."""
+        """Initial readiness check at the beginning of the match.
+        """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
     def RequestAction(self, request, context):
-        """Missing associated documentation comment in .proto file."""
+        """Requests an action from a player.
+        """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
     def EndRound(self, request, context):
-        """Missing associated documentation comment in .proto file."""
+        """Notifies the end of a round.
+        """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
 
-def add_PokerBotServiceServicer_to_server(servicer, server):
+def add_PokerBotServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'ReadyCheck': grpc.unary_unary_rpc_method_handler(
                     servicer.ReadyCheck,
                     request_deserializer=pokerbot__pb2.ReadyCheckRequest.FromString,
                     response_serializer=pokerbot__pb2.ReadyCheckResponse.SerializeToString,
-            ),
-            'StartPhase': grpc.unary_unary_rpc_method_handler(
-                    servicer.StartPhase,
-                    request_deserializer=pokerbot__pb2.StartPhaseMessage.FromString,
-                    response_serializer=pokerbot__pb2.ActionResponse.SerializeToString,
             ),
             'RequestAction': grpc.unary_unary_rpc_method_handler(
                     servicer.RequestAction,
@@ -86,18 +72,17 @@ def add_PokerBotServiceServicer_to_server(servicer, server):
             'EndRound': grpc.unary_unary_rpc_method_handler(
                     servicer.EndRound,
                     request_deserializer=pokerbot__pb2.EndRoundMessage.FromString,
-                    response_serializer=pokerbot__pb2.ReadyCheckResponse.SerializeToString,
+                    response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
-            'pokerbot.PokerBotService', rpc_method_handlers)
+            'poker.PokerBot', rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
 
 
  # This class is part of an EXPERIMENTAL API.
-class PokerBotService(object):
-    """Service definition for interactions between the game engine (client) and the poker bot (server).
-    """
+class PokerBot(object):
+    """Missing associated documentation comment in .proto file."""
 
     @staticmethod
     def ReadyCheck(request,
@@ -110,26 +95,9 @@ class PokerBotService(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/pokerbot.PokerBotService/ReadyCheck',
+        return grpc.experimental.unary_unary(request, target, '/poker.PokerBot/ReadyCheck',
             pokerbot__pb2.ReadyCheckRequest.SerializeToString,
             pokerbot__pb2.ReadyCheckResponse.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
-
-    @staticmethod
-    def StartPhase(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/pokerbot.PokerBotService/StartPhase',
-            pokerbot__pb2.StartPhaseMessage.SerializeToString,
-            pokerbot__pb2.ActionResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -144,7 +112,7 @@ class PokerBotService(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/pokerbot.PokerBotService/RequestAction',
+        return grpc.experimental.unary_unary(request, target, '/poker.PokerBot/RequestAction',
             pokerbot__pb2.ActionRequest.SerializeToString,
             pokerbot__pb2.ActionResponse.FromString,
             options, channel_credentials,
@@ -161,8 +129,8 @@ class PokerBotService(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/pokerbot.PokerBotService/EndRound',
+        return grpc.experimental.unary_unary(request, target, '/poker.PokerBot/EndRound',
             pokerbot__pb2.EndRoundMessage.SerializeToString,
-            pokerbot__pb2.ReadyCheckResponse.FromString,
+            google_dot_protobuf_dot_empty__pb2.Empty.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
