@@ -1,9 +1,11 @@
+import time
 from typing import Deque, List, Optional
 import grpc
 
 from .config import (
     CHECK_READY_TIMEOUT,
     END_ROUND_TIMEOUT,
+    ENFORCE_GAME_CLOCK,
     REQUEST_ACTION_TIMEOUT,
     STARTING_GAME_CLOCK,
 )
@@ -76,6 +78,8 @@ class Player:
         Returns:
             Optional[Action]: The action decided by the pokerbot, or None if an error occurred.
         """
+        start_time = time.perf_counter()
+
         proto_actions = self._convert_actions_to_proto(new_actions)
 
         request = ActionRequest(
@@ -87,13 +91,27 @@ class Player:
 
         try:
             response = self.stub.RequestAction(request, timeout=REQUEST_ACTION_TIMEOUT)
-            return self._convert_proto_to_action(response.action)
+            action = self._convert_proto_to_action(response.action)
         except grpc.RpcError as e:
             print(f"An error occurred: {e}")
-            return None
+            action = None
+
+        end_time = time.perf_counter()
+        duration = end_time - start_time
+
+        if ENFORCE_GAME_CLOCK:
+            self.game_clock -= duration
+        if self.game_clock <= 0:
+            raise TimeoutError("Game clock has run out")
+
+        return action
 
     def end_round(
-        self, opponent_hands: List[str], new_actions: Deque[Action], is_match_over: bool
+        self,
+        opponent_hands: List[str],
+        new_actions: Deque[Action],
+        delta: int,
+        is_match_over: bool,
     ) -> None:
         """
         Signals the end of a round to the pokerbot, including the final state of the game and whether the match is over.
@@ -108,6 +126,7 @@ class Player:
         end_round_message = EndRoundMessage(
             opponent_hand=opponent_hands,
             new_actions=proto_actions,
+            delta=delta,
             is_match_over=is_match_over,
         )
 
