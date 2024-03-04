@@ -11,6 +11,10 @@ PLAYER_2_NAME = os.getenv("PLAYER_2_NAME", "Player2DefaultName")
 PLAYER_1_DNS = os.getenv("PLAYER_1_DNS", "player1-service.default.svc.cluster.local")
 PLAYER_2_DNS = os.getenv("PLAYER_2_DNS", "player2-service.default.svc.cluster.local")
 
+CHECK_READY_TIMEOUT = 5.0
+REQUEST_ACTION_TIMEOUT = 5.0
+END_ROUND_TIMEOUT = 5.0
+
 # GAME PROGRESS IS RECORDED HERE
 GAME_LOG_FILENAME = "gamelog"
 
