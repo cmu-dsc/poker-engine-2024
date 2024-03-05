@@ -14,7 +14,7 @@ BIG_BLIND = 2
 SMALL_BLIND = 1
 
 # GameState for overall game information
-GameState = namedtuple("GameState", ["bankroll", "stacks", "game_clock", "round_num"])
+GameState = namedtuple("GameState", ["bankroll", "game_clock", "round_num"])
 
 # TerminalState for end-of-round information
 TerminalState = namedtuple("TerminalState", ["deltas", "previous_state"])
@@ -105,9 +105,9 @@ class RoundState(
         active = self.button % 2
         if isinstance(action, FoldAction):
             delta = (
-                self.stacks[0] - GameState.stacks[0]
+                self.stacks[0] - STARTING_STACK
                 if active == 0
-                else GameState.stacks[1] - self.stacks[1]
+                else STARTING_STACK - self.stacks[1]
             )
             return TerminalState([delta, -delta], self)
 
@@ -120,10 +120,7 @@ class RoundState(
                     button=1,
                     street=0,
                     pips=[BIG_BLIND] * 2,
-                    stacks=[
-                        GameState.stacks[0] - BIG_BLIND,
-                        GameState.stacks[1] - BIG_BLIND,
-                    ],
+                    stacks=[STARTING_STACK - BIG_BLIND] * 2,
                     hands=self.hands,
                     board=self.board,
                     deck=self.deck,
