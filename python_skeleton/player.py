@@ -1,6 +1,7 @@
 """
 Simple example pokerbot, written in Python.
 """
+
 from skeleton.actions import Action, CallAction, CheckAction, RaiseAction
 from skeleton.states import GameState, TerminalState, RoundState
 from skeleton.states import NUM_ROUNDS, STARTING_STACK, BIG_BLIND, SMALL_BLIND
@@ -47,9 +48,9 @@ class Player(Bot):
         my_cards = round_state.hands[active]  # your cards
         board_cards = round_state.deck.peek(street)  # the board cards
         my_pip = round_state.pips[active]  # the number of chips you have contributed to the pot this round of betting
-        opp_pip = round_state.pips[1-active]  # the number of chips your opponent has contributed to the pot this round of betting
+        opp_pip = round_state.pips[1 - active]  # the number of chips your opponent has contributed to the pot this round of betting
         my_stack = round_state.stacks[active]  # the number of chips you have remaining
-        opp_stack = round_state.stacks[1-active]  # the number of chips your opponent has remaining
+        opp_stack = round_state.stacks[1 - active]  # the number of chips your opponent has remaining
         continue_cost = opp_pip - my_pip  # the number of chips needed to stay in the pot
         my_contribution = STARTING_STACK - my_stack  # the number of chips you have contributed to the pot
         opp_contribution = STARTING_STACK - opp_stack  # the number of chips your opponent has contributed to the pot
