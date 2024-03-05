@@ -24,6 +24,7 @@ class RoundState(
             "pips",
             "stacks",
             "hands",
+            "board",
             "deck",
             "previous_state",
         ],
@@ -35,15 +36,15 @@ class RoundState(
         """
         Compares the player's hands and computes payoffs.
         """
-        score0 = evaluate(self.hands[0])
-        score1 = evaluate(self.hands[1])
+        score0 = evaluate(self.hands[0], self.board)
+        score1 = evaluate(self.hands[1], self.board)
         if score0 > score1:
             delta = STARTING_STACK - self.stacks[1]
         elif score0 < score1:
             delta = self.stacks[0] - STARTING_STACK
         else:  # split the pot
             delta = (self.stacks[0] - self.stacks[1]) // 2
-        return TerminalState([delta, -delta], self.bids, self)
+        return TerminalState([delta, -delta], self)
 
     def legal_actions(self) -> Set[Type]:
         """
@@ -52,7 +53,8 @@ class RoundState(
         active = self.button % 2
         continue_cost = self.pips[1 - active] - self.pips[active]
 
-        if continue_cost == 0:  # No additional chips required to stay in the hand
+        if continue_cost == 0:
+            # we can only raise the stakes if both players can afford it
             bets_forbidden = self.stacks[0] == 0 or self.stacks[1] == 0
             return {CheckAction} if bets_forbidden else {CheckAction, RaiseAction}
 
@@ -66,7 +68,7 @@ class RoundState(
             else {FoldAction, CallAction, RaiseAction}
         )
 
-    def raise_bounds(self) -> (int, int):
+    def raise_bounds(self) -> tuple[int, int]:
         """
         Returns a tuple of the minimum and maximum legal raises.
         """
@@ -92,17 +94,16 @@ class RoundState(
 
         # Dealing the next card (flop or river) and advancing the street
         new_street = self.street + 1
-        new_hands = self.hands
         if new_street in [1, 2]:  # Dealing a card for flop and river
-            for i in range(len(new_hands)):
-                new_hands[i].append(self.deck.deal(1))
+            self.board.append(self.deck.deal(1))
 
         return RoundState(
-            button=1 - self.button,  # Switching the dealer button
+            button=1,
             street=new_street,
             pips=[0, 0],  # Resetting the current round's bet amounts
             stacks=self.stacks,
-            hands=new_hands,
+            hands=self.hands,
+            board=self.board,
             deck=self.deck,
             previous_state=self,
         )
@@ -113,55 +114,68 @@ class RoundState(
         """
         active = self.button % 2
         if isinstance(action, FoldAction):
-            # Determine the amount lost by the folding player
-            # If this is preflop, the SB loses their blind, and BB wins the SB amount
-            if self.street == 0:  # Preflop
-                sb_index = (
-                    self.button % 2
-                )  # SB is the player with the button in heads-up
-                bb_index = 1 - sb_index
-                delta = SMALL_BLIND if active == sb_index else BIG_BLIND
-                deltas = [-delta if i == active else delta for i in range(2)]
-            else:
-                # Postflop, the pot could contain more than just the blinds
-                delta = self.stacks[1 - active] - STARTING_STACK
-                deltas = [delta, -delta] if active == 0 else [-delta, delta]
-            return TerminalState(deltas, self)
+            delta = (
+                self.stacks[0] - STARTING_STACK
+                if active == 0
+                else STARTING_STACK - self.stacks[1]
+            )
+            return TerminalState([delta, -delta], self)
 
         new_pips = list(self.pips)
         new_stacks = list(self.stacks)
 
         if isinstance(action, CallAction):
-            # Player matches the current highest bet
+            if self.button == 0:  # sb calls bb preflop
+                return RoundState(
+                    button=1,
+                    street=0,
+                    pips=[BIG_BLIND] * 2,
+                    stacks=[STARTING_STACK - BIG_BLIND] * 2,
+                    hands=self.hands,
+                    board=self.board,
+                    deck=self.deck,
+                    previous_state=self,
+                )
             contribution = new_pips[1 - active] - new_pips[active]
             new_stacks[active] -= contribution
             new_pips[active] += contribution
+            state = RoundState(
+                button=self.button + 1,
+                street=self.auction,
+                pips=new_pips,
+                stacks=new_stacks,
+                hands=self.hands,
+                board=self.board,
+                deck=self.deck,
+                previous_state=self,
+            )
+            return state.proceed_street()
 
         elif isinstance(action, CheckAction):
-            # Player chooses not to bet further
-            pass  # No change in pips or stacks
+            if (self.street == 0 and self.button > 0) or self.button > 1:
+                # both players acted
+                return self.proceed_street()
+            return RoundState(
+                button=self.button + 1,
+                street=self.street,
+                pips=self.pips,
+                hands=self.hands,
+                board=self.board,
+                deck=self.deck,
+                previous_state=self,
+            )
 
         elif isinstance(action, RaiseAction):
-            # Player raises the bet
             contribution = action.amount - new_pips[active]
             new_stacks[active] -= contribution
             new_pips[active] += contribution
-
-        # Check if both players have acted and the betting is equal
-        if new_pips[0] == new_pips[1]:
-            if self.street == 2:  # After river, proceed to showdown
-                return self.showdown()
-            else:
-                # Proceed to the next street
-                return self.proceed_street()
-
-        # Update the game state and return
-        return RoundState(
-            button=1 - self.button,
-            street=self.street,
-            pips=new_pips,
-            stacks=new_stacks,
-            hands=self.hands,
-            deck=self.deck,
-            previous_state=self,
-        )
+            return RoundState(
+                button=self.button + 1,
+                street=self.street,
+                pips=new_pips,
+                stacks=new_stacks,
+                hands=self.hands,
+                board=self.board,
+                deck=self.deck,
+                previous_state=self,
+            )

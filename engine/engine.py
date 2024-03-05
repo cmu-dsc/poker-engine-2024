@@ -42,14 +42,13 @@ class Game:
         """
         Logs the current state of the round.
         """
-        if round_state.stret == 0 and round_state.button == 0:
+        if round_state.street == 0 and round_state.button == 0:
             self.log.append(f"{self.players[0].name} posts the blind of {SMALL_BLIND}")
             self.log.append(f"{self.players[1].name} posts the blind of {BIG_BLIND}")
             self.log.append(f"{self.players[0].name} dealt {round_state.hands[0]}")
             self.log.append(f"{self.players[1].name} dealt {round_state.hands[1]}")
-        elif round_state.street > 0 and round_state.button == 1: # this cant be right
-            board = round_state.deck.deal(1)
-            self.log.append(f"{STREET_NAMES[round_state.street]} board 
+        elif round_state.street > 0 and round_state.button == 1: # idk if this is right
+            self.log.append(f"{STREET_NAMES[round_state.street]} {round_state.board} 
                             {self.players[0].name} {STARTING_STACK - round_state.stacks[0]} 
                             {self.players[1].name} {STARTING_STACK - round_state.stacks[1]}")
 
@@ -88,7 +87,6 @@ class Game:
         deck = ShortDeck()
         deck.shuffle()
         hands = [deck.deal(1), deck.deal(1)]
-        board = []
         pips = [SMALL_BLIND, BIG_BLIND]
         stacks = [STARTING_STACK - SMALL_BLIND, STARTING_STACK - BIG_BLIND]
 
@@ -100,7 +98,7 @@ class Game:
             active = round_state.button % 2
             player = self.players[active]
             action = player.request_action(
-                hands[active], board, self.new_actions[active]
+                hands[active], round_state.board, self.new_actions[active]
             )
             action = self._validate_action(action, round_state, player.name)
             bet_override = round_state.pips == [0, 0] # still not sure what this does
