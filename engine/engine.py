@@ -19,6 +19,7 @@ RaiseAction = namedtuple("RaiseAction", ["amount"])
 Action = Union[FoldAction, CallAction, CheckAction, RaiseAction]
 TerminalState = namedtuple("TerminalState", ["deltas", "previous_state"])
 
+STREET_NAMES = ['Preflop', 'Flop', 'River']
 CCARDS = lambda cards: ",".join(map(str, cards))
 PCARDS = lambda cards: "[{}]".format(" ".join(map(str, cards)))
 PVALUE = lambda name, value: ", {} ({})".format(name, value)
@@ -41,7 +42,16 @@ class Game:
         """
         Logs the current state of the round.
         """
-        # Implementation...
+        if round_state.stret == 0 and round_state.button == 0:
+            self.log.append(f"{self.players[0].name} posts the blind of {SMALL_BLIND}")
+            self.log.append(f"{self.players[1].name} posts the blind of {BIG_BLIND}")
+            self.log.append(f"{self.players[0].name} dealt {round_state.hands[0]}")
+            self.log.append(f"{self.players[1].name} dealt {round_state.hands[1]}")
+        elif round_state.street > 0 and round_state.button == 1: # this cant be right
+            board = round_state.deck.deal(1)
+            self.log.append(f"{STREET_NAMES[round_state.street]} board 
+                            {self.players[0].name} {STARTING_STACK - round_state.stacks[0]} 
+                            {self.players[1].name} {STARTING_STACK - round_state.stacks[1]}")
 
     def log_action(self, player_name: str, action: Action, is_preflop: bool) -> None:
         """
@@ -60,11 +70,16 @@ class Game:
                 else " raises to " + str(action.amount)
             )
 
-    def log_terminal_state(self, round_state) -> None:
+    def log_terminal_state(self, round_state: TerminalState) -> None:
         """
         Logs the terminal state of a round, including outcomes.
         """
-        # Implementation...
+        previous_state = round_state.previous_state
+        if FoldAction not in previous_state.legal_actions(): # idk why this is needed
+            self.log.append(f"{self.players[0].name} shows {previous_state.hands[0]}")
+            self.log.append(f"{self.players[1].name} shows {previous_state.hands[1]}")
+        self.log.append(f"{self.players[0].name} awarded {round_state.deltas[0]}")
+        self.log.append(f"{self.players[1].name} awarded {round_state.deltas[1]}")
 
     def run_round(self, last_round: bool) -> None:
         """
@@ -88,7 +103,7 @@ class Game:
                 hands[active], board, self.new_actions[active]
             )
             action = self._validate_action(action, round_state, player.name)
-            bet_override = round_state.pips == [0, 0]
+            bet_override = round_state.pips == [0, 0] # still not sure what this does
             self.log_action(player.name, action, bet_override)
             self.new_actions[1 - active].append(action)
             round_state = round_state.proceed(action)
@@ -145,7 +160,7 @@ class Game:
 
         Args:
             action (Action): The action attempted by the player.
-            round_state (RoundState): The current state of the round, including legal actions.
+            round_state (RoundState): The current state of the round.
             player_name (str): The name of the player who took the action.
 
         Returns:
