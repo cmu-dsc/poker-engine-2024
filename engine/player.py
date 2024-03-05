@@ -2,16 +2,10 @@ import time
 from typing import Deque, List, Optional
 import grpc
 
-from .config import (
-    CHECK_READY_TIMEOUT,
-    END_ROUND_TIMEOUT,
-    ENFORCE_GAME_CLOCK,
-    REQUEST_ACTION_TIMEOUT,
-    STARTING_GAME_CLOCK,
-)
-from .engine import Action, CallAction, CheckAction, FoldAction, RaiseAction
-from ..shared.pokerbot_pb2_grpc import PokerBotStub
-from ..shared.pokerbot_pb2 import (
+from engine.config import *
+from engine.actions import *
+from shared.pokerbot_pb2_grpc import PokerBotStub
+from shared.pokerbot_pb2 import (
     ReadyCheckRequest,
     ActionRequest,
     EndRoundMessage,

@@ -2,28 +2,15 @@
 CMU Poker Bot Competition Game Engine 2024
 """
 
-from collections import namedtuple, deque
-from typing import Deque, List, Union
+from collections import deque
+from typing import Deque, List
 
-from .roundstate import RoundState
-from .player import Player
+from engine.roundstate import RoundState
+from engine.player import Player
 
-from .evaluate import ShortDeck
-from .config import *
-
-FoldAction = namedtuple("FoldAction", [])
-CallAction = namedtuple("CallAction", [])
-CheckAction = namedtuple("CheckAction", [])
-# we coalesce BetAction and RaiseAction for convenience
-RaiseAction = namedtuple("RaiseAction", ["amount"])
-Action = Union[FoldAction, CallAction, CheckAction, RaiseAction]
-TerminalState = namedtuple("TerminalState", ["deltas", "previous_state"])
-
-STREET_NAMES = ['Preflop', 'Flop', 'River']
-CCARDS = lambda cards: ",".join(map(str, cards))
-PCARDS = lambda cards: "[{}]".format(" ".join(map(str, cards)))
-PVALUE = lambda name, value: ", {} ({})".format(name, value)
-STATUS = lambda players: "".join([PVALUE(p.name, p.bankroll) for p in players])
+from engine.evaluate import ShortDeck
+from engine.actions import *
+from engine.config import *
 
 
 class Game:
@@ -47,9 +34,12 @@ class Game:
             self.log.append(f"{self.players[1].name} posts the blind of {BIG_BLIND}")
             self.log.append(f"{self.players[0].name} dealt {round_state.hands[0]}")
             self.log.append(f"{self.players[1].name} dealt {round_state.hands[1]}")
-        elif round_state.street > 0 and round_state.button == 1: # idk if this is right
-            self.log.append(f"{STREET_NAMES[round_state.street]} {round_state.board} 
-                            {STARTING_STACK - round_state.stacks[0] + STARTING_STACK - round_state.stacks[1]}")
+        elif (
+            round_state.street > 0 and round_state.button == 1
+        ):  # log the pot every street
+            self.log.append(
+                f"{STREET_NAMES[round_state.street]} {round_state.board} {STARTING_STACK - round_state.stacks[0] + STARTING_STACK - round_state.stacks[1]}"
+            )
 
     def log_action(self, player_name: str, action: Action, is_preflop: bool) -> None:
         """
@@ -73,7 +63,7 @@ class Game:
         Logs the terminal state of a round, including outcomes.
         """
         previous_state = round_state.previous_state
-        if FoldAction not in previous_state.legal_actions(): # idk why this is needed
+        if FoldAction not in previous_state.legal_actions():  # idk why this is needed
             self.log.append(f"{self.players[0].name} shows {previous_state.hands[0]}")
             self.log.append(f"{self.players[1].name} shows {previous_state.hands[1]}")
         self.log.append(f"{self.players[0].name} awarded {round_state.deltas[0]}")
@@ -100,13 +90,15 @@ class Game:
                 hands[active], round_state.board, self.new_actions[active]
             )
             action = self._validate_action(action, round_state, player.name)
-            bet_override = round_state.pips == [0, 0] # still not sure what this does
+            bet_override = round_state.pips == [0, 0]  # still not sure what this does
             self.log_action(player.name, action, bet_override)
             self.new_actions[1 - active].append(action)
             round_state = round_state.proceed(action)
 
         for index, (player, delta) in enumerate(zip(self.players, round_state.deltas)):
-            player.end_round(hands[1 - index], self.new_actions[index], delta, last_round)
+            player.end_round(
+                hands[1 - index], self.new_actions[index], delta, last_round
+            )
             player.bankroll += delta
         self.log_terminal_state(round_state)
 
