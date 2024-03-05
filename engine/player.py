@@ -8,6 +8,7 @@ from .config import (
     ENFORCE_GAME_CLOCK,
     REQUEST_ACTION_TIMEOUT,
     STARTING_GAME_CLOCK,
+    STARTING_STACK,
 )
 from .engine import Action, CallAction, CheckAction, FoldAction, RaiseAction
 from ..shared.pokerbot_pb2_grpc import PokerBotStub
@@ -41,6 +42,7 @@ class Player:
         self.service_dns_name = service_dns_name
         self.auth_token = auth_token
         self.game_clock = STARTING_GAME_CLOCK
+        self.stack = STARTING_STACK
         self.bankroll = 0
 
         self.channel = grpc.insecure_channel(service_dns_name)

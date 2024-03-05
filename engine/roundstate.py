@@ -1,5 +1,7 @@
 from collections import namedtuple
-from typing import Set, Type
+from typing import List, Set, Type
+
+from engine.player import Player
 
 from .config import *
 
@@ -32,16 +34,16 @@ class RoundState(
 ):
     """Encodes the game tree for one round of poker."""
 
-    def showdown(self) -> TerminalState:
+    def showdown(self, players: List[Player]) -> TerminalState:
         """
         Compares the player's hands and computes payoffs.
         """
         score0 = evaluate(self.hands[0], self.board)
         score1 = evaluate(self.hands[1], self.board)
         if score0 > score1:
-            delta = STARTING_STACK - self.stacks[1]
+            delta = players[1].stack - self.stacks[1]
         elif score0 < score1:
-            delta = self.stacks[0] - STARTING_STACK
+            delta = self.stacks[0] - players[0].stack
         else:  # split the pot
             delta = (self.stacks[0] - self.stacks[1]) // 2
         return TerminalState([delta, -delta], self)
@@ -85,12 +87,12 @@ class RoundState(
             self.pips[active] + max_contribution,
         )
 
-    def proceed_street(self) -> "RoundState":
+    def proceed_street(self, players: List[Player]) -> "RoundState":
         """
         Resets the players' pips and advances the game tree to the next round of betting.
         """
         if self.street >= 2:  # After river, proceed to showdown
-            return self.showdown()
+            return self.showdown(players)
 
         # Dealing the next card (flop or river) and advancing the street
         new_street = self.street + 1
@@ -108,16 +110,16 @@ class RoundState(
             previous_state=self,
         )
 
-    def proceed(self, action: Action) -> "RoundState":
+    def proceed(self, action: Action, players: List[Player]) -> "RoundState":
         """
         Advances the game tree by one action performed by the active player.
         """
         active = self.button % 2
         if isinstance(action, FoldAction):
             delta = (
-                self.stacks[0] - STARTING_STACK
+                self.stacks[0] - players[0].stack
                 if active == 0
-                else STARTING_STACK - self.stacks[1]
+                else players[1].stack - self.stacks[1]
             )
             return TerminalState([delta, -delta], self)
 
@@ -130,7 +132,7 @@ class RoundState(
                     button=1,
                     street=0,
                     pips=[BIG_BLIND] * 2,
-                    stacks=[STARTING_STACK - BIG_BLIND] * 2,
+                    stacks=[players[0].stack - BIG_BLIND, players[1].stack - BIG_BLIND],
                     hands=self.hands,
                     board=self.board,
                     deck=self.deck,
@@ -149,12 +151,12 @@ class RoundState(
                 deck=self.deck,
                 previous_state=self,
             )
-            return state.proceed_street()
+            return state.proceed_street(players)
 
         elif isinstance(action, CheckAction):
             if (self.street == 0 and self.button > 0) or self.button > 1:
                 # both players acted
-                return self.proceed_street()
+                return self.proceed_street(players)
             return RoundState(
                 button=self.button + 1,
                 street=self.street,

@@ -49,8 +49,8 @@ class Game:
             self.log.append(f"{self.players[1].name} dealt {round_state.hands[1]}")
         elif round_state.street > 0 and round_state.button == 1: # idk if this is right
             self.log.append(f"{STREET_NAMES[round_state.street]} {round_state.board} 
-                            {self.players[0].name} {STARTING_STACK - round_state.stacks[0]} 
-                            {self.players[1].name} {STARTING_STACK - round_state.stacks[1]}")
+                            {self.players[0].name} {self.players[0].bankroll - round_state.stacks[0]} 
+                            {self.players[1].name} {self.players[0].bankroll - round_state.stacks[1]}")
 
     def log_action(self, player_name: str, action: Action, is_preflop: bool) -> None:
         """
@@ -88,7 +88,10 @@ class Game:
         deck.shuffle()
         hands = [deck.deal(1), deck.deal(1)]
         pips = [SMALL_BLIND, BIG_BLIND]
-        stacks = [STARTING_STACK - SMALL_BLIND, STARTING_STACK - BIG_BLIND]
+        if self.players[0].stack <= 0 or self.players[1].stack <= 0:
+            self.players[0].stack = STARTING_STACK
+            self.players[1].stack = STARTING_STACK
+        stacks = [self.players[0].stack - SMALL_BLIND, self.players[0].stack - BIG_BLIND]
 
         round_state = RoundState(0, 0, pips, stacks, hands, deck, None)
         self.new_actions = [deque(), deque()]
@@ -108,6 +111,7 @@ class Game:
 
         for index, (player, delta) in enumerate(zip(self.players, round_state.deltas)):
             player.end_round(hands[1 - index], self.new_actions[index], delta, last_round)
+            player.stack += delta
             player.bankroll += delta
         self.log_terminal_state(round_state)
 
