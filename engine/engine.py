@@ -111,8 +111,9 @@ class Game:
             Player(PLAYER_1_NAME, PLAYER_1_DNS),
             Player(PLAYER_2_NAME, PLAYER_2_DNS),
         ]
+        player_names = [PLAYER_1_NAME, PLAYER_2_NAME]
 
-        if not all(player.check_ready() for player in self.players):
+        if not all(player.check_ready(player_names = [PLAYER_1_NAME, PLAYER_2_NAME]) for player in self.players):
             print("One or more bots are not ready. Aborting the match.")
             return
 
