@@ -34,9 +34,8 @@ class Game:
             self.log.append(f"{self.players[1].name} posts the blind of {BIG_BLIND}")
             self.log.append(f"{self.players[0].name} dealt {round_state.hands[0]}")
             self.log.append(f"{self.players[1].name} dealt {round_state.hands[1]}")
-        elif (
-            round_state.street > 0 and round_state.button == 1
-        ):  # log the pot every street
+        elif round_state.street > 0 and round_state.button == 1:
+            # log the pot every street
             self.log.append(
                 f"{STREET_NAMES[round_state.street]} {round_state.board} {STARTING_STACK - round_state.stacks[0] + STARTING_STACK - round_state.stacks[1]}"
             )
@@ -114,7 +113,10 @@ class Game:
         ]
         player_names = [PLAYER_1_NAME, PLAYER_2_NAME]
 
-        if not all(player.check_ready(player_names = [PLAYER_1_NAME, PLAYER_2_NAME]) for player in self.players):
+        if not all(
+            player.check_ready(player_names=[PLAYER_1_NAME, PLAYER_2_NAME])
+            for player in self.players
+        ):
             print("One or more bots are not ready. Aborting the match.")
             return
 

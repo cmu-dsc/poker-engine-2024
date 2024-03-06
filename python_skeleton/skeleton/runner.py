@@ -93,8 +93,7 @@ class Runner(PokerBotServicer):
                 pips=[0, 0],
                 stacks=[STARTING_STACK - SMALL_BLIND, STARTING_STACK - BIG_BLIND],
                 hands=[request.player_hand, []],
-                board=[request.board],
-                deck=[],
+                board=request.board_cards,
                 previous_state=None,
             )
             self.active = 0
@@ -103,6 +102,8 @@ class Runner(PokerBotServicer):
             )
             self.round_flag = False
         else:
+            assert isinstance(self.round_state, RoundState) # one of these asserts fails
+            self.round_state.board = request.board_cards
             for proto_action in request.new_actions:
                 action = self._convert_proto_action(proto_action)
                 self.round_state = self.round_state.proceed(action)
@@ -121,10 +122,7 @@ class Runner(PokerBotServicer):
             request (EndRoundMessage): The request containing round results.
             context (grpc.ServicerContext): The gRPC context.
         """
-        for proto_action in request.new_actions:
-            action = self._convert_proto_action(proto_action)
-            self.round_state = self.round_state.proceed(action)
-
+        assert isinstance(self.round_state, RoundState) # this one
         opponent_hand = request.opponent_hand
         hands = list(self.round_state.hands)
         hands[1 - self.active] = opponent_hand
@@ -135,16 +133,20 @@ class Runner(PokerBotServicer):
             stacks=self.round_state.stacks,
             hands=hands,
             board=self.round_state.board,
-            deck=self.round_state.deck,
             previous_state=self.round_state.previous_state,
         )
+
+        for proto_action in request.new_actions:
+            action = self._convert_proto_action(proto_action)
+            self.round_state = self.round_state.proceed(action)
 
         deltas = [0, 0]
         deltas[self.active] = request.delta
         deltas[1 - self.active] = -request.delta
-        terminal_state = TerminalState(deltas=deltas, previous_state=self.round_state)
+        assert isinstance(self.round_state, TerminalState) # and this one
+        self.round_state[deltas] = deltas
 
-        self.pokerbot.handle_round_over(self.game_state, terminal_state, self.active)
+        self.pokerbot.handle_round_over(self.game_state, self.round_state, self.active)
 
         self.game_state = GameState(
             bankroll=self.game_state.bankroll + request.delta,
@@ -153,6 +155,9 @@ class Runner(PokerBotServicer):
         )
 
         self.round_flag = True
+        
+        # if request.is_match_over:
+        #     # do something
 
     def _convert_action_to_response(self, action: Action) -> ActionResponse:
         """

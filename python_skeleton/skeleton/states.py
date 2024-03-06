@@ -23,7 +23,7 @@ TerminalState = namedtuple("TerminalState", ["deltas", "previous_state"])
 class RoundState(
     namedtuple(
         "_RoundState",
-        ["button", "street", "pips", "stacks", "hands", "board", "deck", "previous_state"],
+        ["button", "street", "pips", "stacks", "hands", "board", "previous_state"],
     )
 ):
     """
@@ -84,8 +84,6 @@ class RoundState(
 
         # Dealing the next card (flop or river) and advancing the street
         new_street = self.street + 1
-        if new_street in [1, 2]:  # Dealing a card for flop and river
-            self.board.append(self.deck.deal(1))
 
         return RoundState(
             button=1,
@@ -94,7 +92,6 @@ class RoundState(
             stacks=self.stacks,
             hands=self.hands,
             board=self.board,
-            deck=self.deck,
             previous_state=self,
         )
 
@@ -123,7 +120,6 @@ class RoundState(
                     stacks=[STARTING_STACK - BIG_BLIND] * 2,
                     hands=self.hands,
                     board=self.board,
-                    deck=self.deck,
                     previous_state=self,
                 )
             contribution = new_pips[1 - active] - new_pips[active]
@@ -136,7 +132,6 @@ class RoundState(
                 stacks=new_stacks,
                 hands=self.hands,
                 board=self.board,
-                deck=self.deck,
                 previous_state=self,
             )
             return state.proceed_street()
@@ -151,7 +146,6 @@ class RoundState(
                 pips=self.pips,
                 hands=self.hands,
                 board=self.board,
-                deck=self.deck,
                 previous_state=self,
             )
 
@@ -166,6 +160,5 @@ class RoundState(
                 stacks=new_stacks,
                 hands=self.hands,
                 board=self.board,
-                deck=self.deck,
                 previous_state=self,
             )

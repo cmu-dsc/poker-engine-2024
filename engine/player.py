@@ -72,8 +72,6 @@ class Player:
         Returns:
             Optional[Action]: The action decided by the pokerbot, or None if an error occurred.
         """
-        start_time = time.perf_counter()
-
         proto_actions = self._convert_actions_to_proto(new_actions)
 
         request = ActionRequest(
@@ -82,6 +80,8 @@ class Player:
             board_cards=board_cards,
             new_actions=proto_actions,
         )
+
+        start_time = time.perf_counter()
 
         try:
             response = self.stub.RequestAction(request, timeout=REQUEST_ACTION_TIMEOUT)
