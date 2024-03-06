@@ -23,7 +23,7 @@ TerminalState = namedtuple("TerminalState", ["deltas", "previous_state"])
 class RoundState(
     namedtuple(
         "_RoundState",
-        ["button", "street", "pips", "stacks", "hands", "deck", "previous_state"],
+        ["button", "street", "pips", "stacks", "hands", "board", "deck", "previous_state"],
     )
 ):
     """

@@ -93,6 +93,7 @@ class Runner(PokerBotServicer):
                 pips=[0, 0],
                 stacks=[STARTING_STACK - SMALL_BLIND, STARTING_STACK - BIG_BLIND],
                 hands=[request.player_hand, []],
+                board=[request.board],
                 deck=[],
                 previous_state=None,
             )
@@ -133,6 +134,7 @@ class Runner(PokerBotServicer):
             pips=self.round_state.pips,
             stacks=self.round_state.stacks,
             hands=hands,
+            board=self.round_state.board,
             deck=self.round_state.deck,
             previous_state=self.round_state.previous_state,
         )
