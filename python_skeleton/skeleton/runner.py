@@ -2,6 +2,13 @@
 The infrastructure for interacting with the engine.
 """
 
+import os
+import sys
+
+
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+sys.path.append(project_root)
+
 from argparse import ArgumentParser
 from concurrent import futures
 import grpc

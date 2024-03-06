@@ -35,10 +35,6 @@ class ShortDeck:
         """Deals n cards from the deck."""
         return [self.cards.pop() for _ in range(n)]
 
-    def peek(self, n):
-        """Peeks at the top n cards of the deck without removing them."""
-        return self.cards[:n]
-
 
 def is_trips(hand: List[str]) -> bool:
     return len(set(card[0] for card in hand)) == 1

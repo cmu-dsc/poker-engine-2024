@@ -73,13 +73,14 @@ class Game:
         """
         Runs one round of poker (1 hand).
         """
+        pips = [SMALL_BLIND, BIG_BLIND]
+        stacks = [STARTING_STACK - SMALL_BLIND, STARTING_STACK - BIG_BLIND]
         deck = ShortDeck()
         deck.shuffle()
         hands = [deck.deal(1), deck.deal(1)]
-        pips = [SMALL_BLIND, BIG_BLIND]
-        stacks = [STARTING_STACK - SMALL_BLIND, STARTING_STACK - BIG_BLIND]
+        board = []
 
-        round_state = RoundState(0, 0, pips, stacks, hands, deck, None)
+        round_state = RoundState(0, 0, pips, stacks, hands, board, deck, None)
         self.new_actions = [deque(), deque()]
 
         while not isinstance(round_state, TerminalState):
@@ -119,10 +120,10 @@ class Game:
 
         for round_num in range(1, NUM_ROUNDS + 1):
             self.log.append(f"\nRound #{round_num}")
-            self.run_round(self.players, round_num == NUM_ROUNDS)
+            self.run_round((round_num == NUM_ROUNDS))
             self.players = self.players[::-1]  # Alternate the dealer
 
-        self.finalize_log()
+        self._finalize_log()
 
     def _finalize_log(self) -> None:
         """

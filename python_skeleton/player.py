@@ -74,7 +74,7 @@ class Player(Bot):
         legal_actions = round_state.legal_actions() # the actions you are allowed to take
         street = round_state.street # 0, 1, or 2 representing pre-flop, flop, or river respectively
         my_cards = round_state.hands[active] # your cards
-        board_cards = round_state.deck.peek(street) # the board cards
+        board_cards = round_state.deck # the board cards
         my_pip = round_state.pips[active] # the number of chips you have contributed to the pot this round of betting
         opp_pip = round_state.pips[1 - active] # the number of chips your opponent has contributed to the pot this round of betting
         my_stack = round_state.stacks[active] # the number of chips you have remaining

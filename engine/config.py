@@ -8,8 +8,8 @@ PLAYER_1_NAME = os.getenv("PLAYER_1_NAME", "Player1DefaultName")
 PLAYER_2_NAME = os.getenv("PLAYER_2_NAME", "Player2DefaultName")
 
 # DNS names for player bots, retrieved from environment variables
-PLAYER_1_DNS = os.getenv("PLAYER_1_DNS", "player1-service.default.svc.cluster.local")
-PLAYER_2_DNS = os.getenv("PLAYER_2_DNS", "player2-service.default.svc.cluster.local")
+PLAYER_1_DNS = os.getenv("PLAYER_1_DNS", "localhost:50051")
+PLAYER_2_DNS = os.getenv("PLAYER_2_DNS", "localhost:50052   ")
 
 CHECK_READY_TIMEOUT = 5.0
 REQUEST_ACTION_TIMEOUT = 5.0
