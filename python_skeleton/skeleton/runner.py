@@ -21,6 +21,7 @@ from shared.pokerbot_pb2 import (
     ActionType,
     ActionResponse,
 )
+from shared.pokerbot_pb2 import Action as ProtoAction
 from shared.pokerbot_pb2_grpc import PokerBotServicer, add_PokerBotServicer_to_server
 from skeleton.actions import Action, FoldAction, CallAction, CheckAction, RaiseAction
 from skeleton.states import (
@@ -169,16 +170,19 @@ class Runner(PokerBotServicer):
         Returns:
             ActionResponse: The converted ActionResponse.
         """
-        if isinstance(action, FoldAction):
-            return ActionResponse(action=Action(type=ActionType.FOLD))
-        elif isinstance(action, CallAction):
-            return ActionResponse(action=Action(type=ActionType.CALL))
-        elif isinstance(action, CheckAction):
-            return ActionResponse(action=Action(type=ActionType.CHECK))
-        elif isinstance(action, RaiseAction):
-            return ActionResponse(
-                action=Action(type=ActionType.RAISE, amount=action.amount)
-            )
+        try:
+            if isinstance(action, FoldAction):
+                return ActionResponse(action=ProtoAction(action=ActionType.FOLD))
+            elif isinstance(action, CallAction):
+                return ActionResponse(action=ProtoAction(action=ActionType.CALL))
+            elif isinstance(action, CheckAction):
+                return ActionResponse(action=ProtoAction(action=ActionType.CHECK))
+            elif isinstance(action, RaiseAction):
+                return ActionResponse(
+                    action=ProtoAction(action=ActionType.RAISE, amount=action.amount)
+                )
+        except Exception as e:
+            print("Error converting action to response:", e)
 
     def _convert_proto_action(self, proto_action) -> Action:
         """
