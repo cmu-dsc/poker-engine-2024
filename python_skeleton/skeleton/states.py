@@ -127,7 +127,7 @@ class RoundState(
             new_pips[active] += contribution
             state = RoundState(
                 button=self.button + 1,
-                street=self.auction,
+                street=self.street,
                 pips=new_pips,
                 stacks=new_stacks,
                 hands=self.hands,
