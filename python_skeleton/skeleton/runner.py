@@ -105,7 +105,15 @@ class Runner(PokerBotServicer):
         else:
             assert isinstance(self.round_state, RoundState) # one of these asserts fails
             try:
-                self.round_state.board = request.board_cards
+                self.round_state = RoundState(
+                    self.round_state.button,
+                    self.round_state.street,
+                    self.round_state.pips,
+                    self.round_state.stacks,
+                    self.round_state.hands,
+                    request.board_cards,
+                    self.round_state.previous_state
+                )
             except Exception as e:
                 print("Error setting board cards", e)
             for proto_action in request.new_actions:
