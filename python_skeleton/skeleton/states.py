@@ -144,6 +144,7 @@ class RoundState(
                 button=self.button + 1,
                 street=self.street,
                 pips=self.pips,
+                stacks=self.stacks,
                 hands=self.hands,
                 board=self.board,
                 previous_state=self,
