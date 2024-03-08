@@ -86,7 +86,7 @@ class RoundState(
         # Dealing the next card (flop or river) and advancing the street
         new_street = self.street + 1
         if new_street in [1, 2]:  # Dealing a card for flop and river
-            self.board.append(self.deck.deal(1))
+            self.board.extend(self.deck.deal(1))
 
         return RoundState(
             button=1,
