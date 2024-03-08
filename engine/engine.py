@@ -50,12 +50,10 @@ class Game:
             self.log.append(f"{player_name} calls")
         elif isinstance(action, CheckAction):
             self.log.append(f"{player_name} checks")
-        else:  # isinstance(action, RaiseAction):
-            self.log.append(
-                f"{player_name}" + " bets "
-                if is_preflop
-                else " raises to " + str(action.amount)
-            )
+        elif is_preflop:  # isinstance(action, RaiseAction):
+            self.log.append(f"{player_name} bets {str(action.amount)}")
+        else:
+            self.log.append(f"{player_name} raises to {str(action.amount)}")
 
     def log_terminal_state(self, round_state: TerminalState) -> None:
         """
@@ -90,7 +88,7 @@ class Game:
                 hands[active], round_state.board, self.new_actions[active]
             )
             action = self._validate_action(action, round_state, player.name)
-            bet_override = round_state.pips == [0, 0]  # still not sure what this does
+            bet_override = round_state.street == 0  # idk
             self.log_action(player.name, action, bet_override)
             self.new_actions[1 - active].append(action)
             round_state = round_state.proceed(action)
