@@ -12,6 +12,7 @@ sys.path.append(project_root)
 from argparse import ArgumentParser
 from concurrent import futures
 import grpc
+from google.protobuf.empty_pb2 import Empty
 from shared.pokerbot_pb2 import (
     ReadyCheckRequest,
     ReadyCheckResponse,
@@ -155,7 +156,6 @@ class Runner(PokerBotServicer):
         deltas = [0, 0]
         deltas[self.active] = request.delta
         deltas[1 - self.active] = -request.delta
-        assert isinstance(self.round_state, TerminalState) # and this one
         self.round_state = TerminalState(deltas, self.round_state.previous_state)
 
         self.pokerbot.handle_round_over(self.game_state, self.round_state, self.active)
@@ -170,6 +170,8 @@ class Runner(PokerBotServicer):
         
         # if request.is_match_over:
         #     # do something
+        
+        return Empty()
 
     def _convert_action_to_response(self, action: Action) -> ActionResponse:
         """
