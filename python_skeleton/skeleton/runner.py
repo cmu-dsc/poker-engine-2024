@@ -104,7 +104,10 @@ class Runner(PokerBotServicer):
             self.round_flag = False
         else:
             assert isinstance(self.round_state, RoundState) # one of these asserts fails
-            self.round_state.board = request.board_cards
+            try:
+                self.round_state.board = request.board_cards
+            except Exception as e:
+                print("Error setting board cards", e)
             for proto_action in request.new_actions:
                 action = self._convert_proto_action(proto_action)
                 self.round_state = self.round_state.proceed(action)
@@ -145,7 +148,7 @@ class Runner(PokerBotServicer):
         deltas[self.active] = request.delta
         deltas[1 - self.active] = -request.delta
         assert isinstance(self.round_state, TerminalState) # and this one
-        self.round_state[deltas] = deltas
+        self.round_state = TerminalState(deltas, self.round_state.previous_state)
 
         self.pokerbot.handle_round_over(self.game_state, self.round_state, self.active)
 
