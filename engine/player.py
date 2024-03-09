@@ -1,11 +1,16 @@
+import grpc
+import os
 import time
 from typing import Deque, List, Optional
-import grpc
+import sys
+
+shared_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "shared"))
+sys.path.append(shared_path)
 
 from engine.config import *
 from engine.actions import *
-from shared.pokerbot_pb2_grpc import PokerBotStub
-from shared.pokerbot_pb2 import (
+from pokerbot_pb2_grpc import PokerBotStub
+from pokerbot_pb2 import (
     ReadyCheckRequest,
     ActionRequest,
     EndRoundMessage,

@@ -6,14 +6,14 @@ import os
 import sys
 
 
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-sys.path.append(project_root)
+shared_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "shared"))
+sys.path.append(shared_path)
 
 from argparse import ArgumentParser
 from concurrent import futures
 import grpc
 from google.protobuf.empty_pb2 import Empty
-from shared.pokerbot_pb2 import (
+from pokerbot_pb2 import (
     ReadyCheckRequest,
     ReadyCheckResponse,
     ActionRequest,
@@ -22,8 +22,8 @@ from shared.pokerbot_pb2 import (
     ActionType,
     ActionResponse,
 )
-from shared.pokerbot_pb2 import Action as ProtoAction
-from shared.pokerbot_pb2_grpc import PokerBotServicer, add_PokerBotServicer_to_server
+from pokerbot_pb2 import Action as ProtoAction
+from pokerbot_pb2_grpc import PokerBotServicer, add_PokerBotServicer_to_server
 from skeleton.actions import Action, FoldAction, CallAction, CheckAction, RaiseAction
 from skeleton.states import (
     GameState,
@@ -234,6 +234,3 @@ def run_bot(pokerbot, args):
     print(f"Pokerbot server started on port {args.port}")
     server.wait_for_termination()
 
-
-if __name__ == "__main__":
-    run_bot()
