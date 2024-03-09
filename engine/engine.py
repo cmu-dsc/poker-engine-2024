@@ -86,21 +86,34 @@ class Game:
             self.log_round_state(round_state)
             active = round_state.button % 2
             player = self.players[active]
+            print("Requesting an action...")
             action = player.request_action(
                 hands[active], round_state.board, self.new_actions[active]
             )
-            action = self._validate_action(action, round_state, player.name)
+            try:
+                action = self._validate_action(action, round_state, player.name)
+            except Exception as e:
+                print("Error validating action", e)
             bet_override = round_state.pips == [0, 0]  # still not sure what this does
-            self.log_action(player.name, action, bet_override)
+            try:
+                self.log_action(player.name, action, bet_override)
+            except Exception as e:
+                print("Error logging action", e)
             self.new_actions[1 - active].append(action)
-            round_state = round_state.proceed(action)
+            try:
+                round_state = round_state.proceed(action)
+            except Exception as e:
+                print("Error proceeding with round state using action", e)
 
         for index, (player, delta) in enumerate(zip(self.players, round_state.deltas)):
             player.end_round(
                 hands[1 - index], self.new_actions[index], delta, last_round
             )
             player.bankroll += delta
-        self.log_terminal_state(round_state)
+        try:
+            self.log_terminal_state(round_state)
+        except Exception as e:
+            print("Error logging terminal state", e)
 
     def run_match(self) -> None:
         """
@@ -113,13 +126,14 @@ class Game:
         ]
         player_names = [PLAYER_1_NAME, PLAYER_2_NAME]
 
+        print("Checking ready...")
         if not all(
             player.check_ready(player_names=[PLAYER_1_NAME, PLAYER_2_NAME])
             for player in self.players
         ):
             print("One or more bots are not ready. Aborting the match.")
             return
-
+        print("Starting match...")
         for round_num in range(1, NUM_ROUNDS + 1):
             self.log.append(f"\nRound #{round_num}")
             self.run_round((round_num == NUM_ROUNDS))

@@ -72,20 +72,36 @@ class Player:
         Returns:
             Optional[Action]: The action decided by the pokerbot, or None if an error occurred.
         """
+        print("Starting request with actions", new_actions)
         proto_actions = self._convert_actions_to_proto(new_actions)
+        print("converted proto actions to", proto_actions)
 
-        request = ActionRequest(
-            game_clock=self.game_clock,
-            player_hand=player_hand,
-            board_cards=board_cards,
-            new_actions=proto_actions,
-        )
+        try:
+            request = ActionRequest(
+                game_clock=self.game_clock,
+                player_hand=player_hand,
+                board_cards=board_cards,
+                new_actions=proto_actions,
+            )
+        except Exception as e:
+            print("Proto ActionRequest error", e)
+            print(type(self.game_clock))
+            print(type(player_hand))
+            print([type(p) for p in player_hand])
+            print(type(board_cards))
+            print([type(p) for p in board_cards[0]])
+            print(type(proto_actions))
+            print([type(p) for p in proto_actions])
+
 
         start_time = time.perf_counter()
 
         try:
+            print("Starting request with request", request)
             response = self.stub.RequestAction(request, timeout=REQUEST_ACTION_TIMEOUT)
+            print("Ending request with response", response)
             action = self._convert_proto_to_action(response.action)
+            print("converted actions to", action)
         except grpc.RpcError as e:
             print(f"An error occurred: {e}")
             action = None
