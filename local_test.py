@@ -12,7 +12,7 @@ def run_game_engine() -> None:
 
 if __name__ == "__main__":
     player1_process = subprocess.Popen(["python", "python_skeleton/debugplayer.py", "--port", "50051"])
-    player2_process = subprocess.Popen(["python", "python_skeleton/player.py", "--port", "50052"])
+    player2_process = subprocess.Popen(["python", "python_skeleton/debugplayer.py", "--port", "50052"])
 
     game_engine_process = Process(target=run_game_engine)
     game_engine_process.start()

@@ -6,6 +6,7 @@ import os
 import sys
 
 
+print("loading paths")
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 sys.path.append(project_root)
 
@@ -52,6 +53,7 @@ class Runner(PokerBotServicer):
         self.round_state = None
         self.active = 0
         self.round_flag = True
+        print("loaded paths")
 
     def ReadyCheck(
         self, request: ReadyCheckRequest, context: grpc.ServicerContext
@@ -66,6 +68,7 @@ class Runner(PokerBotServicer):
         Returns:
             ReadyCheckResponse: The response indicating readiness.
         """
+        print("Received ready check request")
         return ReadyCheckResponse(ready=True)
 
     def RequestAction(
@@ -231,6 +234,7 @@ def run_bot(pokerbot, args):
     server.start()
     print(f"Pokerbot server started on port {args.port}")
     server.wait_for_termination()
+    print(f"Terminated server")
 
 
 if __name__ == "__main__":

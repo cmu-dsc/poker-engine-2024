@@ -178,6 +178,7 @@ class Game:
             if isinstance(round_state, RoundState)
             else {CheckAction}
         )
+        print("Received:", type(action), "Legal actions:", legal_actions)
         if isinstance(action, RaiseAction):
             amount = int(action.amount)
             min_raise, max_raise = round_state.raise_bounds()
