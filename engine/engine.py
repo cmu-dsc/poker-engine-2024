@@ -182,6 +182,7 @@ class Game:
         if isinstance(action, RaiseAction):
             amount = int(action.amount)
             min_raise, max_raise = round_state.raise_bounds()
+            print("Validating raise range", min_raise, max_raise)
             if RaiseAction in legal_actions and min_raise <= amount <= max_raise:
                 return action
             else:

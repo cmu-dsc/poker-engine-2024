@@ -87,12 +87,13 @@ class Player(Bot):
         # return FoldAction()
         if RaiseAction in legal_actions:
             min_raise, max_raise = round_state.raise_bounds() # the smallest and largest numbers of chips for a legal bet/raise
+            print("Bot raise range", min_raise, max_raise)
             min_cost = min_raise - my_pip # the cost of a minimum bet/raise
             max_cost = max_raise - my_pip # the cost of a maximum bet/raise
 
-        # if RaiseAction in legal_actions and random() < 0.0:
-            # print("Debug player raise action")
-            # return RaiseAction(max_raise)
+        if RaiseAction in legal_actions and random() < 1.0:
+            print("Debug player raise action")
+            return RaiseAction(max_raise)
         if CheckAction in legal_actions:
             print("Debug player check action")
             return CheckAction()
