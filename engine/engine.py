@@ -3,14 +3,32 @@ CMU Poker Bot Competition Game Engine 2024
 """
 
 from collections import deque
+import os
 from typing import Deque, List
 
-from engine.roundstate import RoundState
-from engine.player import Player
-
+from engine.actions import (
+    STREET_NAMES,
+    Action,
+    CallAction,
+    CheckAction,
+    FoldAction,
+    RaiseAction,
+    TerminalState,
+)
+from engine.config import (
+    BIG_BLIND,
+    GAME_LOG_FILENAME,
+    NUM_ROUNDS,
+    PLAYER_1_DNS,
+    PLAYER_1_NAME,
+    PLAYER_2_DNS,
+    PLAYER_2_NAME,
+    SMALL_BLIND,
+    STARTING_STACK,
+)
 from engine.evaluate import ShortDeck
-from engine.actions import *
-from engine.config import *
+from engine.player import Player
+from engine.roundstate import RoundState
 
 
 class Game:
@@ -37,10 +55,10 @@ class Game:
         elif round_state.street > 0 and round_state.button == 1:
             # log the pot every street
             self.log.append(
-                f"{STREET_NAMES[round_state.street]} {round_state.board} {STARTING_STACK - round_state.stacks[0] + STARTING_STACK - round_state.stacks[1]}"
+                f"{STREET_NAMES[round_state.street]} Board: {round_state.board} Pot: {STARTING_STACK - round_state.stacks[0] + STARTING_STACK - round_state.stacks[1]}"
             )
 
-    def log_action(self, player_name: str, action: Action, is_preflop: bool) -> None:
+    def log_action(self, player_name: str, action: Action) -> None:
         """
         Logs an action taken by a player.
         """
@@ -50,9 +68,7 @@ class Game:
             self.log.append(f"{player_name} calls")
         elif isinstance(action, CheckAction):
             self.log.append(f"{player_name} checks")
-        elif is_preflop:  # isinstance(action, RaiseAction):
-            self.log.append(f"{player_name} bets {str(action.amount)}")
-        else:
+        else:  # isinstance(action, RaiseAction)
             self.log.append(f"{player_name} raises to {str(action.amount)}")
 
     def log_terminal_state(self, round_state: TerminalState) -> None:
@@ -84,21 +100,33 @@ class Game:
             self.log_round_state(round_state)
             active = round_state.button % 2
             player = self.players[active]
+            print("Requesting an action...")
             action = player.request_action(
                 hands[active], round_state.board, self.new_actions[active]
             )
-            action = self._validate_action(action, round_state, player.name)
-            bet_override = round_state.street == 0  # idk
-            self.log_action(player.name, action, bet_override)
+            try:
+                action = self._validate_action(action, round_state, player.name)
+            except Exception as e:
+                print("Error validating action", e)
+            try:
+                self.log_action(player.name, action)
+            except Exception as e:
+                print("Error logging action", e)
             self.new_actions[1 - active].append(action)
-            round_state = round_state.proceed(action)
+            try:
+                round_state = round_state.proceed(action)
+            except Exception as e:
+                print("Error proceeding with round state using action", e)
 
         for index, (player, delta) in enumerate(zip(self.players, round_state.deltas)):
             player.end_round(
                 hands[1 - index], self.new_actions[index], delta, last_round
             )
             player.bankroll += delta
-        self.log_terminal_state(round_state)
+        try:
+            self.log_terminal_state(round_state)
+        except Exception as e:
+            print("Error logging terminal state", e)
 
     def run_match(self) -> None:
         """
@@ -111,13 +139,11 @@ class Game:
         ]
         player_names = [PLAYER_1_NAME, PLAYER_2_NAME]
 
-        if not all(
-            player.check_ready(player_names=[PLAYER_1_NAME, PLAYER_2_NAME])
-            for player in self.players
-        ):
+        print("Checking ready...")
+        if not all(player.check_ready(player_names) for player in self.players):
             print("One or more bots are not ready. Aborting the match.")
             return
-
+        print("Starting match...")
         for round_num in range(1, NUM_ROUNDS + 1):
             self.log.append(f"\nRound #{round_num}")
             self.run_round((round_num == NUM_ROUNDS))
@@ -162,9 +188,11 @@ class Game:
             if isinstance(round_state, RoundState)
             else {CheckAction}
         )
+        print("Received:", type(action), "Legal actions:", legal_actions)
         if isinstance(action, RaiseAction):
             amount = int(action.amount)
             min_raise, max_raise = round_state.raise_bounds()
+            print("Validating raise range", min_raise, max_raise)
             if RaiseAction in legal_actions and min_raise <= amount <= max_raise:
                 return action
             else:

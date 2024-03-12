@@ -6,8 +6,9 @@ import os
 import sys
 
 
-shared_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "shared"))
-sys.path.append(shared_path)
+print("loading paths")
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+sys.path.append(project_root)
 
 from argparse import ArgumentParser
 from concurrent import futures
@@ -53,6 +54,7 @@ class Runner(PokerBotServicer):
         self.round_state = None
         self.active = 0
         self.round_flag = True
+        print("loaded paths")
 
     def ReadyCheck(
         self, request: ReadyCheckRequest, context: grpc.ServicerContext
@@ -67,6 +69,7 @@ class Runner(PokerBotServicer):
         Returns:
             ReadyCheckResponse: The response indicating readiness.
         """
+        print("Received ready check request")
         return ReadyCheckResponse(ready=True)
 
     def RequestAction(
@@ -92,13 +95,15 @@ class Runner(PokerBotServicer):
             self.round_state = RoundState(
                 button=0,
                 street=0,
-                pips=[0, 0],
+                pips=[SMALL_BLIND, BIG_BLIND],
                 stacks=[STARTING_STACK - SMALL_BLIND, STARTING_STACK - BIG_BLIND],
                 hands=[request.player_hand, []],
                 board=request.board_cards,
                 previous_state=None,
             )
             self.active = 0
+            if request.new_actions: # going second
+                self.active = 1
             self.pokerbot.handle_new_round(
                 self.game_state, self.round_state, self.active
             )
@@ -117,9 +122,9 @@ class Runner(PokerBotServicer):
                 )
             except Exception as e:
                 print("Error setting board cards", e)
-            for proto_action in request.new_actions:
-                action = self._convert_proto_action(proto_action)
-                self.round_state = self.round_state.proceed(action)
+        for proto_action in request.new_actions:
+            action = self._convert_proto_action(proto_action)
+            self.round_state = self.round_state.proceed(action)    
 
         action = self.pokerbot.get_action(
             self.game_state, self.round_state, self.active
@@ -233,4 +238,5 @@ def run_bot(pokerbot, args):
     server.start()
     print(f"Pokerbot server started on port {args.port}")
     server.wait_for_termination()
+    print(f"Terminated server")
 
