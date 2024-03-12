@@ -16,7 +16,12 @@ REQUEST_ACTION_TIMEOUT = 10.0
 END_ROUND_TIMEOUT = 10.0
 
 # GAME PROGRESS IS RECORDED HERE
-GAME_LOG_FILENAME = "logs/gamelog"
+LOGS_DIRECTORY = "logs"
+GAME_LOG_FILENAME = "gamelog"
+
+# Check if the logs directory exists, create it if it doesn't
+if not os.path.exists(LOGS_DIRECTORY):
+    os.makedirs(LOGS_DIRECTORY)
 
 # PLAYER_LOG_SIZE_LIMIT IS IN BYTES
 PLAYER_LOG_SIZE_LIMIT = 524288

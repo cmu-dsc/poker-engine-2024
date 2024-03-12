@@ -18,6 +18,7 @@ from .actions import (
 from .config import (
     BIG_BLIND,
     GAME_LOG_FILENAME,
+    LOGS_DIRECTORY,
     NUM_ROUNDS,
     PLAYER_1_DNS,
     PLAYER_1_NAME,
@@ -110,7 +111,12 @@ class Game:
         board = round_state.previous_state.board
         for index, (player, delta) in enumerate(zip(self.players, round_state.deltas)):
             player.end_round(
-                hands[index], hands[1 - index], board, self.new_actions[index], delta, last_round
+                hands[index],
+                hands[1 - index],
+                board,
+                self.new_actions[index],
+                delta,
+                last_round,
             )
             player.bankroll += delta
         self.log_terminal_state(round_state)
@@ -145,10 +151,10 @@ class Game:
         """
         Finalizes the game log, writing it to a file and uploading it.
         """
-        log_filename = f"{GAME_LOG_FILENAME}.txt"
+        log_filename = os.path.join(LOGS_DIRECTORY, f"{GAME_LOG_FILENAME}.txt")
         log_index = 1
         while os.path.exists(log_filename):
-            log_filename = f"{GAME_LOG_FILENAME}_{log_index}.txt"
+            log_filename = os.path.join(LOGS_DIRECTORY, f"{GAME_LOG_FILENAME}_{log_index}.txt")
             log_index += 1
 
         print(f"Writing {log_filename}")
