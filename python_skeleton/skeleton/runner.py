@@ -94,13 +94,15 @@ class Runner(PokerBotServicer):
             self.round_state = RoundState(
                 button=0,
                 street=0,
-                pips=[0, 0],
+                pips=[SMALL_BLIND, BIG_BLIND],
                 stacks=[STARTING_STACK - SMALL_BLIND, STARTING_STACK - BIG_BLIND],
                 hands=[request.player_hand, []],
                 board=request.board_cards,
                 previous_state=None,
             )
             self.active = 0
+            if request.new_actions: # going second
+                self.active = 1
             self.pokerbot.handle_new_round(
                 self.game_state, self.round_state, self.active
             )
@@ -119,9 +121,9 @@ class Runner(PokerBotServicer):
                 )
             except Exception as e:
                 print("Error setting board cards", e)
-            for proto_action in request.new_actions:
-                action = self._convert_proto_action(proto_action)
-                self.round_state = self.round_state.proceed(action)
+        for proto_action in request.new_actions:
+            action = self._convert_proto_action(proto_action)
+            self.round_state = self.round_state.proceed(action)    
 
         action = self.pokerbot.get_action(
             self.game_state, self.round_state, self.active
