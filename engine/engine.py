@@ -91,9 +91,8 @@ class Game:
         deck = ShortDeck()
         deck.shuffle()
         hands = [deck.deal(1), deck.deal(1)]
-        board = []
 
-        round_state = RoundState(0, 0, pips, stacks, hands, board, deck, None)
+        round_state = RoundState(0, 0, pips, stacks, hands, [], deck, None)
         self.new_actions = [deque(), deque()]
 
         while not isinstance(round_state, TerminalState):
@@ -108,9 +107,10 @@ class Game:
             self.new_actions[1 - active].append(action)
             round_state = round_state.proceed(action)
 
+        board = round_state.previous_state.board
         for index, (player, delta) in enumerate(zip(self.players, round_state.deltas)):
             player.end_round(
-                hands[1 - index], self.new_actions[index], delta, last_round
+                hands[index], hands[1 - index], board, self.new_actions[index], delta, last_round
             )
             player.bankroll += delta
         self.log_terminal_state(round_state)

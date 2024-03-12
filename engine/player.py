@@ -114,7 +114,9 @@ class Player:
 
     def end_round(
         self,
-        opponent_hands: List[str],
+        player_hand: List[str],
+        opponent_hand: List[str],
+        board_cards: List[str],
         new_actions: Deque[Action],
         delta: int,
         is_match_over: bool,
@@ -123,14 +125,18 @@ class Player:
         Signals the end of a round to the pokerbot, including the final state of the game and whether the match is over.
 
         Args:
-            opponent_hands (List[str]): The final hands of the opponents.
+            player_hand (List[str]): The final hand of the player.
+            opponent_hand (List[str]): The final hand of the opponent.
+            board_cards (List[str]): The cards visible on the board.
             new_actions (Deque[Action]): Any actions that occurred after the last action request.
             is_match_over (bool): Indicates whether the match has concluded.
         """
         proto_actions = self._convert_actions_to_proto(new_actions)
 
         end_round_message = EndRoundMessage(
-            opponent_hand=opponent_hands,
+            player_hand=player_hand,
+            opponent_hand=opponent_hand,
+            board_cards=board_cards,
             new_actions=proto_actions,
             delta=delta,
             is_match_over=is_match_over,

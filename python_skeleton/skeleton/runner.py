@@ -8,6 +8,7 @@ import grpc
 from google.protobuf.empty_pb2 import Empty
 import os
 import sys
+from typing import List
 
 from skeleton.actions import Action, FoldAction, CallAction, CheckAction, RaiseAction
 from skeleton.states import (
@@ -89,20 +90,7 @@ class Runner(PokerBotServicer):
         )
 
         if self.round_flag:  # new hand
-            self.round_state = RoundState(
-                button=0,
-                street=0,
-                pips=[SMALL_BLIND, BIG_BLIND],
-                stacks=[STARTING_STACK - SMALL_BLIND, STARTING_STACK - BIG_BLIND],
-                hands=[request.player_hand, []],
-                board=request.board_cards,
-                previous_state=None,
-            )
-            self.active = 0
-            self.pokerbot.handle_new_round(
-                self.game_state, self.round_state, self.active
-            )
-            self.round_flag = False
+            self._new_round(request.player_hand, request.board_cards)
         else:
             self.round_state = RoundState(  # update the board cards
                 self.round_state.button,
@@ -133,6 +121,8 @@ class Runner(PokerBotServicer):
             request (EndRoundMessage): The request containing round results.
             context (grpc.ServicerContext): The gRPC context.
         """
+        if self.round_flag:
+            self._new_round(request.player_hand, request.board_cards)
         if isinstance(self.round_state, TerminalState):
             self.round_state = self.round_state.previous_state
         opponent_hand = request.opponent_hand
@@ -210,6 +200,20 @@ class Runner(PokerBotServicer):
             return CheckAction()
         elif proto_action.action == ActionType.RAISE:
             return RaiseAction(proto_action.amount)
+
+    def _new_round(self, hand: List[str], board: List[str]) -> RoundState:
+        self.round_state = RoundState(
+            button=0,
+            street=0,
+            pips=[SMALL_BLIND, BIG_BLIND],
+            stacks=[STARTING_STACK - SMALL_BLIND, STARTING_STACK - BIG_BLIND],
+            hands=[hand, []],
+            board=board,
+            previous_state=None,
+        )
+        self.active = 0
+        self.pokerbot.handle_new_round(self.game_state, self.round_state, self.active)
+        self.round_flag = False
 
 
 def parse_args():
