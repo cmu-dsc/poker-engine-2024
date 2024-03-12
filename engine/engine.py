@@ -3,14 +3,32 @@ CMU Poker Bot Competition Game Engine 2024
 """
 
 from collections import deque
+import os
 from typing import Deque, List
 
-from engine.roundstate import RoundState
-from engine.player import Player
-
+from engine.actions import (
+    STREET_NAMES,
+    Action,
+    CallAction,
+    CheckAction,
+    FoldAction,
+    RaiseAction,
+    TerminalState,
+)
+from engine.config import (
+    BIG_BLIND,
+    GAME_LOG_FILENAME,
+    NUM_ROUNDS,
+    PLAYER_1_DNS,
+    PLAYER_1_NAME,
+    PLAYER_2_DNS,
+    PLAYER_2_NAME,
+    SMALL_BLIND,
+    STARTING_STACK,
+)
 from engine.evaluate import ShortDeck
-from engine.actions import *
-from engine.config import *
+from engine.player import Player
+from engine.roundstate import RoundState
 
 
 class Game:
@@ -37,10 +55,10 @@ class Game:
         elif round_state.street > 0 and round_state.button == 1:
             # log the pot every street
             self.log.append(
-                f"{STREET_NAMES[round_state.street]} {round_state.board} {STARTING_STACK - round_state.stacks[0] + STARTING_STACK - round_state.stacks[1]}"
+                f"{STREET_NAMES[round_state.street]} Board: {round_state.board} Pot: {STARTING_STACK - round_state.stacks[0] + STARTING_STACK - round_state.stacks[1]}"
             )
 
-    def log_action(self, player_name: str, action: Action, is_preflop: bool) -> None:
+    def log_action(self, player_name: str, action: Action) -> None:
         """
         Logs an action taken by a player.
         """
@@ -50,12 +68,8 @@ class Game:
             self.log.append(f"{player_name} calls")
         elif isinstance(action, CheckAction):
             self.log.append(f"{player_name} checks")
-        else:  # isinstance(action, RaiseAction):
-            self.log.append(
-                f"{player_name}" + " bets "
-                if is_preflop
-                else " raises to " + str(action.amount)
-            )
+        else:  # isinstance(action, RaiseAction)
+            self.log.append(f"{player_name} raises to {str(action.amount)}")
 
     def log_terminal_state(self, round_state: TerminalState) -> None:
         """
@@ -94,9 +108,8 @@ class Game:
                 action = self._validate_action(action, round_state, player.name)
             except Exception as e:
                 print("Error validating action", e)
-            bet_override = round_state.pips == [0, 0]  # still not sure what this does
             try:
-                self.log_action(player.name, action, bet_override)
+                self.log_action(player.name, action)
             except Exception as e:
                 print("Error logging action", e)
             self.new_actions[1 - active].append(action)
@@ -127,10 +140,7 @@ class Game:
         player_names = [PLAYER_1_NAME, PLAYER_2_NAME]
 
         print("Checking ready...")
-        if not all(
-            player.check_ready(player_names=[PLAYER_1_NAME, PLAYER_2_NAME])
-            for player in self.players
-        ):
+        if not all(player.check_ready(player_names) for player in self.players):
             print("One or more bots are not ready. Aborting the match.")
             return
         print("Starting match...")
