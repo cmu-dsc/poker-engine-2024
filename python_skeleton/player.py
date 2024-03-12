@@ -25,6 +25,7 @@ class Player(Bot):
         Returns:
         Nothing.
         """
+        self.log = []
         pass
 
     def handle_new_round(self, game_state: GameState, round_state: RoundState, active: int) -> None:
@@ -44,9 +45,10 @@ class Player(Bot):
         #round_num = game_state.round_num # the round number from 1 to NUM_ROUNDS
         #my_cards = round_state.hands[active] # your cards
         #big_blind = bool(active) # True if you are the big blind
+        self.log.append("new round")
         pass
 
-    def handle_round_over(self, game_state: GameState, terminal_state: TerminalState, active: int) -> None:
+    def handle_round_over(self, game_state: GameState, terminal_state: TerminalState, active: int, is_match_over: bool) -> None:
         """
         Called when a round ends. Called NUM_ROUNDS times.
 
@@ -63,6 +65,11 @@ class Player(Bot):
         #street = previous_state.street # 0, 3, 4, or 5 representing when this round ended
         #my_cards = previous_state.hands[active] # your cards
         #opp_cards = previous_state.hands[1-active] # opponent's cards or [] if not revealed
+        self.log.append("game over")
+        
+        if is_match_over:
+            with open("bot_log.txt", "w") as log_file:
+                log_file.write("\n".join(self.log))
         pass
 
     def get_action(self, game_state: GameState, round_state: RoundState, active: int) -> Action:
@@ -95,6 +102,7 @@ class Player(Bot):
             min_cost = min_raise - my_pip # the cost of a minimum bet/raise
             max_cost = max_raise - my_pip # the cost of a maximum bet/raise
 
+        self.log.append("did stuff")
         if RaiseAction in legal_actions and random() < 0.99:
             return RaiseAction(max_raise)
         if CheckAction in legal_actions:

@@ -156,7 +156,7 @@ class Runner(PokerBotServicer):
         deltas[1 - self.active] = -request.delta
         self.round_state = TerminalState(deltas, self.round_state.previous_state)
 
-        self.pokerbot.handle_round_over(self.game_state, self.round_state, self.active)
+        self.pokerbot.handle_round_over(self.game_state, self.round_state, self.active, request.is_match_over)
 
         self.game_state = GameState(
             bankroll=self.game_state.bankroll + request.delta,
