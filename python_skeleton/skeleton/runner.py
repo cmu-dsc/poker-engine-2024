@@ -88,7 +88,7 @@ class Runner(PokerBotServicer):
             self.game_state.round_num,
         )
 
-        if self.round_flag:
+        if self.round_flag:  # new hand
             self.round_state = RoundState(
                 button=0,
                 street=0,
@@ -104,7 +104,7 @@ class Runner(PokerBotServicer):
             )
             self.round_flag = False
         else:
-            self.round_state = RoundState(
+            self.round_state = RoundState(  # update the board cards
                 self.round_state.button,
                 self.round_state.street,
                 self.round_state.pips,
@@ -113,16 +113,15 @@ class Runner(PokerBotServicer):
                 request.board_cards,
                 self.round_state.previous_state,
             )
+
         for proto_action in request.new_actions:
             action = self._convert_proto_action(proto_action)
             self.round_state = self.round_state.proceed(action)
-            self.active = self.round_state.button % 2
 
         action = self.pokerbot.get_action(
-            self.game_state, self.round_state, self.active
+            self.game_state, self.round_state, self.round_state.button % 2
         )
-        self.round_state.proceed(action)
-        self.active = self.round_state.button % 2
+        self.round_state = self.round_state.proceed(action)
 
         return self._convert_action_to_response(action)
 
