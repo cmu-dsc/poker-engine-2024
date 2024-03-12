@@ -133,6 +133,8 @@ class Runner(PokerBotServicer):
             request (EndRoundMessage): The request containing round results.
             context (grpc.ServicerContext): The gRPC context.
         """
+        if isinstance(self.round_state, TerminalState):
+            self.round_state = self.round_state.previous_state
         opponent_hand = request.opponent_hand
         hands = list(self.round_state.hands)
         hands[1 - self.active] = opponent_hand
