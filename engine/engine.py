@@ -100,33 +100,20 @@ class Game:
             self.log_round_state(round_state)
             active = round_state.button % 2
             player = self.players[active]
-            print("Requesting an action...")
             action = player.request_action(
                 hands[active], round_state.board, self.new_actions[active]
             )
-            try:
-                action = self._validate_action(action, round_state, player.name)
-            except Exception as e:
-                print("Error validating action", e)
-            try:
-                self.log_action(player.name, action)
-            except Exception as e:
-                print("Error logging action", e)
+            action = self._validate_action(action, round_state, player.name)
+            self.log_action(player.name, action)
             self.new_actions[1 - active].append(action)
-            try:
-                round_state = round_state.proceed(action)
-            except Exception as e:
-                print("Error proceeding with round state using action", e)
+            round_state = round_state.proceed(action)
 
         for index, (player, delta) in enumerate(zip(self.players, round_state.deltas)):
             player.end_round(
                 hands[1 - index], self.new_actions[index], delta, last_round
             )
             player.bankroll += delta
-        try:
-            self.log_terminal_state(round_state)
-        except Exception as e:
-            print("Error logging terminal state", e)
+        self.log_terminal_state(round_state)
 
     def run_match(self) -> None:
         """
@@ -188,11 +175,9 @@ class Game:
             if isinstance(round_state, RoundState)
             else {CheckAction}
         )
-        print("Received:", type(action), "Legal actions:", legal_actions)
         if isinstance(action, RaiseAction):
             amount = int(action.amount)
             min_raise, max_raise = round_state.raise_bounds()
-            print("Validating raise range", min_raise, max_raise)
             if RaiseAction in legal_actions and min_raise <= amount <= max_raise:
                 return action
             else:

@@ -50,7 +50,6 @@ class RoundState(
         """
         active = self.button % 2
         continue_cost = self.pips[1 - active] - self.pips[active]
-        print(f"continue cost {continue_cost} for active {active}")
 
         if continue_cost == 0:
             # we can only raise the stakes if both players can afford it
@@ -61,7 +60,6 @@ class RoundState(
         raises_forbidden = (
             continue_cost >= self.stacks[active] or self.stacks[1 - active] == 0
         )
-        print("stack", self.stacks[active], "pip", self.pips[active])
         return (
             {FoldAction, CallAction}
             if raises_forbidden

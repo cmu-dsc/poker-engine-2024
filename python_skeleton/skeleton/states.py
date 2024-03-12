@@ -64,15 +64,12 @@ class RoundState(
         """
         active = self.button % 2
         continue_cost = self.pips[1 - active] - self.pips[active]
-        print("continue cost", self.pips[1 - active] - self.pips[active], "my", self.pips[active])
         max_contribution = min(
             self.stacks[active], self.stacks[1 - active] + continue_cost
         )
-        print("MAX RAISE", self.stacks[active], "or", self.stacks[1 - active], "+", continue_cost)
         min_contribution = min(
             max_contribution, continue_cost + max(continue_cost, BIG_BLIND)
         )
-        print("MIN RAISE", max_contribution, "or", continue_cost, "+", "max(", continue_cost, BIG_BLIND, ")")
 
         return (
             self.pips[active] + min_contribution,

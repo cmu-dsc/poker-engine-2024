@@ -20,7 +20,9 @@ from skeleton.states import (
 )
 from skeleton.bot import Bot
 
-shared_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "shared"))
+shared_path = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "..", "shared")
+)
 sys.path.append(shared_path)
 
 from pokerbot_pb2 import (  # noqa: E402
@@ -52,7 +54,6 @@ class Runner(PokerBotServicer):
         self.round_state = None
         self.active = 0
         self.round_flag = True
-        print("loaded paths")
 
     def ReadyCheck(
         self, request: ReadyCheckRequest, context: grpc.ServicerContext
@@ -67,7 +68,6 @@ class Runner(PokerBotServicer):
         Returns:
             ReadyCheckResponse: The response indicating readiness.
         """
-        print("Received ready check request")
         return ReadyCheckResponse(ready=True)
 
     def RequestAction(
@@ -107,21 +107,15 @@ class Runner(PokerBotServicer):
             )
             self.round_flag = False
         else:
-            assert isinstance(
-                self.round_state, RoundState
-            )  # one of these asserts fails
-            try:
-                self.round_state = RoundState(
-                    self.round_state.button,
-                    self.round_state.street,
-                    self.round_state.pips,
-                    self.round_state.stacks,
-                    self.round_state.hands,
-                    request.board_cards,
-                    self.round_state.previous_state,
-                )
-            except Exception as e:
-                print("Error setting board cards", e)
+            self.round_state = RoundState(
+                self.round_state.button,
+                self.round_state.street,
+                self.round_state.pips,
+                self.round_state.stacks,
+                self.round_state.hands,
+                request.board_cards,
+                self.round_state.previous_state,
+            )
         for proto_action in request.new_actions:
             action = self._convert_proto_action(proto_action)
             self.round_state = self.round_state.proceed(action)
@@ -140,7 +134,6 @@ class Runner(PokerBotServicer):
             request (EndRoundMessage): The request containing round results.
             context (grpc.ServicerContext): The gRPC context.
         """
-        assert isinstance(self.round_state, RoundState)  # this one
         opponent_hand = request.opponent_hand
         hands = list(self.round_state.hands)
         hands[1 - self.active] = opponent_hand
@@ -188,19 +181,16 @@ class Runner(PokerBotServicer):
         Returns:
             ActionResponse: The converted ActionResponse.
         """
-        try:
-            if isinstance(action, FoldAction):
-                return ActionResponse(action=ProtoAction(action=ActionType.FOLD))
-            elif isinstance(action, CallAction):
-                return ActionResponse(action=ProtoAction(action=ActionType.CALL))
-            elif isinstance(action, CheckAction):
-                return ActionResponse(action=ProtoAction(action=ActionType.CHECK))
-            elif isinstance(action, RaiseAction):
-                return ActionResponse(
-                    action=ProtoAction(action=ActionType.RAISE, amount=action.amount)
-                )
-        except Exception as e:
-            print("Error converting action to response:", e)
+        if isinstance(action, FoldAction):
+            return ActionResponse(action=ProtoAction(action=ActionType.FOLD))
+        elif isinstance(action, CallAction):
+            return ActionResponse(action=ProtoAction(action=ActionType.CALL))
+        elif isinstance(action, CheckAction):
+            return ActionResponse(action=ProtoAction(action=ActionType.CHECK))
+        elif isinstance(action, RaiseAction):
+            return ActionResponse(
+                action=ProtoAction(action=ActionType.RAISE, amount=action.amount)
+            )
 
     def _convert_proto_action(self, proto_action) -> Action:
         """
