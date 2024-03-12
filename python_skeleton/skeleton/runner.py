@@ -13,7 +13,8 @@ sys.path.append(project_root)
 from argparse import ArgumentParser
 from concurrent import futures
 import grpc
-from shared.pokerbot_pb2 import (
+from google.protobuf.empty_pb2 import Empty
+from pokerbot_pb2 import (
     ReadyCheckRequest,
     ReadyCheckResponse,
     ActionRequest,
@@ -22,8 +23,8 @@ from shared.pokerbot_pb2 import (
     ActionType,
     ActionResponse,
 )
-from shared.pokerbot_pb2 import Action as ProtoAction
-from shared.pokerbot_pb2_grpc import PokerBotServicer, add_PokerBotServicer_to_server
+from pokerbot_pb2 import Action as ProtoAction
+from pokerbot_pb2_grpc import PokerBotServicer, add_PokerBotServicer_to_server
 from skeleton.actions import Action, FoldAction, CallAction, CheckAction, RaiseAction
 from skeleton.states import (
     GameState,
@@ -160,7 +161,6 @@ class Runner(PokerBotServicer):
         deltas = [0, 0]
         deltas[self.active] = request.delta
         deltas[1 - self.active] = -request.delta
-        assert isinstance(self.round_state, TerminalState) # and this one
         self.round_state = TerminalState(deltas, self.round_state.previous_state)
 
         self.pokerbot.handle_round_over(self.game_state, self.round_state, self.active)
@@ -175,6 +175,8 @@ class Runner(PokerBotServicer):
         
         # if request.is_match_over:
         #     # do something
+        
+        return Empty()
 
     def _convert_action_to_response(self, action: Action) -> ActionResponse:
         """
@@ -238,6 +240,3 @@ def run_bot(pokerbot, args):
     server.wait_for_termination()
     print(f"Terminated server")
 
-
-if __name__ == "__main__":
-    run_bot()

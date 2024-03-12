@@ -3,6 +3,7 @@ Simple example pokerbot, written in Python.
 """
 
 from random import random
+
 from skeleton.actions import Action, CallAction, CheckAction, RaiseAction
 from skeleton.states import GameState, TerminalState, RoundState
 from skeleton.states import NUM_ROUNDS, STARTING_STACK, BIG_BLIND, SMALL_BLIND
@@ -17,13 +18,19 @@ class Player(Bot):
     def __init__(self) -> None:
         """
         Called when a new game starts. Called exactly once.
+
+        Arguments:
+        Nothing.
+
+        Returns:
+        Nothing.
         """
         pass
 
     def handle_new_round(self, game_state: GameState, round_state: RoundState, active: int) -> None:
         """
         Called when a new round starts. Called NUM_ROUNDS times.
-
+        
         Args:
             game_state (GameState): The state of the game.
             round_state (RoundState): The state of the round.
