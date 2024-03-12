@@ -1,44 +1,45 @@
-"""
-Encapsulates game and round state information for the player.
-"""
-
 from collections import namedtuple
-from typing import List, Tuple
+from typing import Set, Type
 
-from skeleton.actions import Action, FoldAction, CallAction, CheckAction, RaiseAction
-
-# Constants for game settings
-NUM_ROUNDS = 1000
-STARTING_STACK = 400
-BIG_BLIND = 2
-SMALL_BLIND = 1
-
-# GameState for overall game information
-GameState = namedtuple("GameState", ["bankroll", "game_clock", "round_num"])
-
-# TerminalState for end-of-round information
-TerminalState = namedtuple("TerminalState", ["deltas", "previous_state"])
+from engine.actions import *
+from engine.config import *
+from engine.evaluate import evaluate
 
 
 class RoundState(
     namedtuple(
         "_RoundState",
-        ["button", "street", "pips", "stacks", "hands", "board", "previous_state"],
+        [
+            "button",
+            "street",
+            "pips",
+            "stacks",
+            "hands",
+            "board",
+            "deck",
+            "previous_state",
+        ],
     )
 ):
-    """
-    Encodes the game tree for one round of poker.
-    """
+    """Encodes the game tree for one round of poker."""
 
     def showdown(self) -> TerminalState:
         """
-        Compares the players' hands and computes payoffs.
+        Compares the player's hands and computes payoffs.
         """
-        return TerminalState([0, 0], self)
+        score0 = evaluate(self.hands[0], self.board)
+        score1 = evaluate(self.hands[1], self.board)
+        if score0 > score1:
+            delta = STARTING_STACK - self.stacks[1]
+        elif score0 < score1:
+            delta = self.stacks[0] - STARTING_STACK
+        else:  # split the pot
+            delta = (self.stacks[0] - self.stacks[1]) // 2
+        return TerminalState([delta, -delta], self)
 
-    def legal_actions(self) -> List[Action]:
+    def legal_actions(self) -> Set[Type]:
         """
-        Returns a list which corresponds to the active player's legal moves.
+        Returns a set which corresponds to the active player's legal moves.
         """
         active = self.button % 2
         continue_cost = self.pips[1 - active] - self.pips[active]
@@ -58,7 +59,7 @@ class RoundState(
             else {FoldAction, CallAction, RaiseAction}
         )
 
-    def raise_bounds(self) -> Tuple[int, int]:
+    def raise_bounds(self) -> tuple[int, int]:
         """
         Returns a tuple of the minimum and maximum legal raises.
         """
@@ -77,13 +78,15 @@ class RoundState(
 
     def proceed_street(self) -> "RoundState":
         """
-        Advances the game tree to the next round of betting.
+        Resets the players' pips and advances the game tree to the next round of betting.
         """
         if self.street >= 2:  # After river, proceed to showdown
             return self.showdown()
 
         # Dealing the next card (flop or river) and advancing the street
         new_street = self.street + 1
+        if new_street in [1, 2]:  # Dealing a card for flop and river
+            self.board.extend(self.deck.deal(1))
 
         return RoundState(
             button=1,
@@ -92,6 +95,7 @@ class RoundState(
             stacks=self.stacks,
             hands=self.hands,
             board=self.board,
+            deck=self.deck,
             previous_state=self,
         )
 
@@ -120,6 +124,7 @@ class RoundState(
                     stacks=[STARTING_STACK - BIG_BLIND] * 2,
                     hands=self.hands,
                     board=self.board,
+                    deck=self.deck,
                     previous_state=self,
                 )
             contribution = new_pips[1 - active] - new_pips[active]
@@ -132,6 +137,7 @@ class RoundState(
                 stacks=new_stacks,
                 hands=self.hands,
                 board=self.board,
+                deck=self.deck,
                 previous_state=self,
             )
             return state.proceed_street()
@@ -147,6 +153,7 @@ class RoundState(
                 stacks=self.stacks,
                 hands=self.hands,
                 board=self.board,
+                deck=self.deck,
                 previous_state=self,
             )
 
@@ -161,5 +168,6 @@ class RoundState(
                 stacks=new_stacks,
                 hands=self.hands,
                 board=self.board,
+                deck=self.deck,
                 previous_state=self,
             )
