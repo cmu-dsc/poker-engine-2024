@@ -1,0 +1,31 @@
+version: '3'
+services:
+  engine:
+    build:
+      context: .
+      dockerfile: dockerfiles/engine/Dockerfile
+    volumes:
+      - ./logs:/usr/src/app/logs
+    environment:
+      - PLAYER_1_NAME=bot1
+      - PLAYER_2_NAME=bot2
+      - PLAYER_1_DNS=bot1:50051
+      - PLAYER_2_DNS=bot2:50051
+
+  bot1:
+    build:
+      context: .
+      dockerfile: dockerfiles/python_skeleton/Dockerfile
+    depends_on:
+      - engine
+    expose:
+      - "50051"
+
+  bot2:
+    build:
+      context: .
+      dockerfile: dockerfiles/python_skeleton/Dockerfile
+    depends_on:
+      - engine
+    expose:
+      - "50051"

@@ -4,8 +4,8 @@ import sys
 import time
 from typing import Deque, List, Optional
 
-from engine.actions import Action, CallAction, CheckAction, FoldAction, RaiseAction
-from engine.config import (
+from .actions import Action, CallAction, CheckAction, FoldAction, RaiseAction
+from .config import (
     CHECK_READY_TIMEOUT,
     END_ROUND_TIMEOUT,
     ENFORCE_GAME_CLOCK,

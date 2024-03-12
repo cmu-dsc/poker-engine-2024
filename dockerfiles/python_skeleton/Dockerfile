@@ -8,7 +8,6 @@ RUN /install.sh && rm /install.sh
 
 COPY python_skeleton/requirements.txt ./
 RUN /root/.cargo/bin/uv pip install --no-cache-dir -r requirements.txt
-RUN /root/.cargo/bin/uv pip install -e .
 
 COPY python_skeleton/ ./python_skeleton/
 

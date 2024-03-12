@@ -1,7 +1,7 @@
 from collections import namedtuple
 from typing import Set, Type
 
-from engine.actions import (
+from .actions import (
     Action,
     CallAction,
     CheckAction,
@@ -9,8 +9,8 @@ from engine.actions import (
     RaiseAction,
     TerminalState,
 )
-from engine.config import BIG_BLIND, STARTING_STACK
-from engine.evaluate import evaluate
+from .config import BIG_BLIND, STARTING_STACK
+from .evaluate import evaluate
 
 
 class RoundState(

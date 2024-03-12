@@ -10,9 +10,9 @@ COPY engine/requirements.txt ./
 RUN /root/.cargo/bin/uv pip install --no-cache-dir -r requirements.txt
 
 COPY engine/ ./engine/
-
 COPY shared/ ./shared/
+COPY run.py ./run.py
 
-EXPOSE 50051
+VOLUME /usr/src/app/logs
 
-CMD ["python", "engine/engine.py"]
+CMD ["python", "run.py", "--docker"]

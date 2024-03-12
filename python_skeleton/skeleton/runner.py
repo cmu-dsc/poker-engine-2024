@@ -169,9 +169,6 @@ class Runner(PokerBotServicer):
 
         self.round_flag = True
 
-        # if request.is_match_over:
-        #     # do something
-
         return Empty()
 
     def _convert_action_to_response(self, action: Action) -> ActionResponse:

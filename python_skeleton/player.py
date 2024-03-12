@@ -3,6 +3,7 @@ Simple example pokerbot, written in Python.
 """
 
 from random import random
+import sys
 
 from skeleton.actions import Action, CallAction, CheckAction, RaiseAction
 from skeleton.states import GameState, TerminalState, RoundState
@@ -70,6 +71,7 @@ class Player(Bot):
         if is_match_over:
             with open("bot_log.txt", "w") as log_file:
                 log_file.write("\n".join(self.log))
+            sys.exit(0) # why doesn't this shut the container down?
         pass
 
     def get_action(self, game_state: GameState, round_state: RoundState, active: int) -> Action:

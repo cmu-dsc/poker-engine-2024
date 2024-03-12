@@ -6,7 +6,7 @@ from collections import deque
 import os
 from typing import Deque, List
 
-from engine.actions import (
+from .actions import (
     STREET_NAMES,
     Action,
     CallAction,
@@ -15,7 +15,7 @@ from engine.actions import (
     RaiseAction,
     TerminalState,
 )
-from engine.config import (
+from .config import (
     BIG_BLIND,
     GAME_LOG_FILENAME,
     NUM_ROUNDS,
@@ -26,9 +26,9 @@ from engine.config import (
     SMALL_BLIND,
     STARTING_STACK,
 )
-from engine.evaluate import ShortDeck
-from engine.player import Player
-from engine.roundstate import RoundState
+from .evaluate import ShortDeck
+from .player import Player
+from .roundstate import RoundState
 
 
 class Game:
@@ -135,6 +135,9 @@ class Game:
             self.log.append(f"\nRound #{round_num}")
             self.run_round((round_num == NUM_ROUNDS))
             self.players = self.players[::-1]  # Alternate the dealer
+
+        self.log.append(f"{self.players[0].name} Bankroll: {self.players[0].bankroll}")
+        self.log.append(f"{self.players[1].name} Bankroll: {self.players[1].bankroll}")
 
         self._finalize_log()
 

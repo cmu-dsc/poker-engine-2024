@@ -28,7 +28,7 @@ class Bot:
         raise NotImplementedError("handle_new_round")
 
     def handle_round_over(
-        self, game_state: GameState, terminal_state: TerminalState, active: int, is_math_over: bool
+        self, game_state: GameState, terminal_state: TerminalState, active: int, is_match_over: bool
     ) -> None:
         """
         Called when a round ends. Called NUM_ROUNDS times.
@@ -37,6 +37,7 @@ class Bot:
         game_state: the GameState object.
         terminal_state: the TerminalState object.
         active: your player's index.
+        is_match_over: last round in the match
 
         Returns:
         Nothing.
