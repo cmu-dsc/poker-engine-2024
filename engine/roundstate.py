@@ -1,8 +1,15 @@
 from collections import namedtuple
 from typing import Set, Type
 
-from engine.actions import *
-from engine.config import *
+from engine.actions import (
+    Action,
+    CallAction,
+    CheckAction,
+    FoldAction,
+    RaiseAction,
+    TerminalState,
+)
+from engine.config import BIG_BLIND, STARTING_STACK
 from engine.evaluate import evaluate
 
 
@@ -43,7 +50,7 @@ class RoundState(
         """
         active = self.button % 2
         continue_cost = self.pips[1 - active] - self.pips[active]
-        print("continue cost", continue_cost, "for active", active)
+        print(f"continue cost {continue_cost} for active {active}")
 
         if continue_cost == 0:
             # we can only raise the stakes if both players can afford it

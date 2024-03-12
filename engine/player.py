@@ -1,9 +1,16 @@
+import grpc
 import time
 from typing import Deque, List, Optional
-import grpc
 
-from engine.config import *
-from engine.actions import *
+from engine.actions import Action, CallAction, CheckAction, FoldAction, RaiseAction
+from engine.config import (
+    CHECK_READY_TIMEOUT,
+    END_ROUND_TIMEOUT,
+    ENFORCE_GAME_CLOCK,
+    REQUEST_ACTION_TIMEOUT,
+    STARTING_GAME_CLOCK,
+)
+
 from shared.pokerbot_pb2_grpc import PokerBotStub
 from shared.pokerbot_pb2 import (
     ReadyCheckRequest,
@@ -92,7 +99,6 @@ class Player:
             print([type(p) for p in board_cards[0]])
             print(type(proto_actions))
             print([type(p) for p in proto_actions])
-
 
         start_time = time.perf_counter()
 

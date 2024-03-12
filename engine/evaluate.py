@@ -60,7 +60,9 @@ def is_pair(hand: List[str]) -> bool:
 
 
 def high_card_value(hand: List[str]) -> int:
-    return sum(int(card[0]) * (10**i) for i, card in enumerate(sorted(hand, reverse=True)))
+    return sum(
+        int(card[0]) * (10**i) for i, card in enumerate(sorted(hand, reverse=True))
+    )
 
 
 def evaluate(hand: List[str], board: List[str]) -> int:
