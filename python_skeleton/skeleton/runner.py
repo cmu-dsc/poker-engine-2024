@@ -2,39 +2,37 @@
 The infrastructure for interacting with the engine.
 """
 
-import os
-import sys
-
-
-print("loading paths")
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-sys.path.append(project_root)
-
 from argparse import ArgumentParser
 from concurrent import futures
 import grpc
 from google.protobuf.empty_pb2 import Empty
-from pokerbot_pb2 import (
-    ReadyCheckRequest,
-    ReadyCheckResponse,
-    ActionRequest,
-    ActionResponse,
-    EndRoundMessage,
-    ActionType,
-    ActionResponse,
-)
-from pokerbot_pb2 import Action as ProtoAction
-from pokerbot_pb2_grpc import PokerBotServicer, add_PokerBotServicer_to_server
+import os
+import sys
+
 from skeleton.actions import Action, FoldAction, CallAction, CheckAction, RaiseAction
 from skeleton.states import (
     GameState,
-    TerminalState,
     RoundState,
+    TerminalState,
     STARTING_STACK,
     BIG_BLIND,
     SMALL_BLIND,
 )
 from skeleton.bot import Bot
+
+shared_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "shared"))
+sys.path.append(shared_path)
+
+from pokerbot_pb2 import (  # noqa: E402
+    Action as ProtoAction,
+    ActionRequest,
+    ActionResponse,
+    ActionType,
+    EndRoundMessage,
+    ReadyCheckRequest,
+    ReadyCheckResponse,
+)
+from pokerbot_pb2_grpc import PokerBotServicer, add_PokerBotServicer_to_server  # noqa: E402
 
 
 class Runner(PokerBotServicer):
@@ -102,14 +100,16 @@ class Runner(PokerBotServicer):
                 previous_state=None,
             )
             self.active = 0
-            if request.new_actions: # going second
+            if request.new_actions:  # going second
                 self.active = 1
             self.pokerbot.handle_new_round(
                 self.game_state, self.round_state, self.active
             )
             self.round_flag = False
         else:
-            assert isinstance(self.round_state, RoundState) # one of these asserts fails
+            assert isinstance(
+                self.round_state, RoundState
+            )  # one of these asserts fails
             try:
                 self.round_state = RoundState(
                     self.round_state.button,
@@ -118,13 +118,13 @@ class Runner(PokerBotServicer):
                     self.round_state.stacks,
                     self.round_state.hands,
                     request.board_cards,
-                    self.round_state.previous_state
+                    self.round_state.previous_state,
                 )
             except Exception as e:
                 print("Error setting board cards", e)
         for proto_action in request.new_actions:
             action = self._convert_proto_action(proto_action)
-            self.round_state = self.round_state.proceed(action)    
+            self.round_state = self.round_state.proceed(action)
 
         action = self.pokerbot.get_action(
             self.game_state, self.round_state, self.active
@@ -140,7 +140,7 @@ class Runner(PokerBotServicer):
             request (EndRoundMessage): The request containing round results.
             context (grpc.ServicerContext): The gRPC context.
         """
-        assert isinstance(self.round_state, RoundState) # this one
+        assert isinstance(self.round_state, RoundState)  # this one
         opponent_hand = request.opponent_hand
         hands = list(self.round_state.hands)
         hands[1 - self.active] = opponent_hand
@@ -172,10 +172,10 @@ class Runner(PokerBotServicer):
         )
 
         self.round_flag = True
-        
+
         # if request.is_match_over:
         #     # do something
-        
+
         return Empty()
 
     def _convert_action_to_response(self, action: Action) -> ActionResponse:
@@ -238,5 +238,4 @@ def run_bot(pokerbot, args):
     server.start()
     print(f"Pokerbot server started on port {args.port}")
     server.wait_for_termination()
-    print(f"Terminated server")
-
+    print("Terminated server")

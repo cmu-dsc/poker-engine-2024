@@ -95,7 +95,6 @@ class PokerBot(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        print("checking ready grpc")
         return grpc.experimental.unary_unary(request, target, '/poker.PokerBot/ReadyCheck',
             pokerbot__pb2.ReadyCheckRequest.SerializeToString,
             pokerbot__pb2.ReadyCheckResponse.FromString,

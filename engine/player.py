@@ -1,4 +1,6 @@
 import grpc
+import os
+import sys
 import time
 from typing import Deque, List, Optional
 
@@ -11,8 +13,11 @@ from engine.config import (
     STARTING_GAME_CLOCK,
 )
 
-from shared.pokerbot_pb2_grpc import PokerBotStub
-from shared.pokerbot_pb2 import (
+shared_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "shared"))
+sys.path.append(shared_path)
+
+from shared.pokerbot_pb2_grpc import PokerBotStub  # noqa: E402
+from shared.pokerbot_pb2 import (  # noqa: E402
     ReadyCheckRequest,
     ActionRequest,
     EndRoundMessage,
