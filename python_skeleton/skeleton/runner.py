@@ -52,7 +52,6 @@ class Runner(PokerBotServicer):
         self.pokerbot: Bot = pokerbot
         self.game_state = GameState(0, 0.0, 1)
         self.round_state = None
-        self.active = 0
         self.round_flag = True
 
     def ReadyCheck(
@@ -100,8 +99,6 @@ class Runner(PokerBotServicer):
                 previous_state=None,
             )
             self.active = 0
-            if request.new_actions:  # going second
-                self.active = 1
             self.pokerbot.handle_new_round(
                 self.game_state, self.round_state, self.active
             )
@@ -119,10 +116,13 @@ class Runner(PokerBotServicer):
         for proto_action in request.new_actions:
             action = self._convert_proto_action(proto_action)
             self.round_state = self.round_state.proceed(action)
+            self.active = self.round_state.button % 2
 
         action = self.pokerbot.get_action(
             self.game_state, self.round_state, self.active
         )
+        self.round_state.proceed(action)
+        self.active = self.round_state.button % 2
 
         return self._convert_action_to_response(action)
 
@@ -156,7 +156,9 @@ class Runner(PokerBotServicer):
         deltas[1 - self.active] = -request.delta
         self.round_state = TerminalState(deltas, self.round_state.previous_state)
 
-        self.pokerbot.handle_round_over(self.game_state, self.round_state, self.active, request.is_match_over)
+        self.pokerbot.handle_round_over(
+            self.game_state, self.round_state, self.active, request.is_match_over
+        )
 
         self.game_state = GameState(
             bankroll=self.game_state.bankroll + request.delta,
