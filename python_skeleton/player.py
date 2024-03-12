@@ -2,10 +2,10 @@
 Simple example pokerbot, written in Python.
 """
 
-from random import random
+import random
 import sys
 
-from skeleton.actions import Action, CallAction, CheckAction, RaiseAction
+from skeleton.actions import Action, CallAction, CheckAction, FoldAction, RaiseAction
 from skeleton.states import GameState, TerminalState, RoundState
 from skeleton.states import NUM_ROUNDS, STARTING_STACK, BIG_BLIND, SMALL_BLIND
 from skeleton.bot import Bot
@@ -71,7 +71,7 @@ class Player(Bot):
         if is_match_over:
             with open("bot_log.txt", "w") as log_file:
                 log_file.write("\n".join(self.log))
-            sys.exit(0) # why doesn't this shut the container down?
+            # sys.exit(0) # why doesn't this shut the container down?
         pass
 
     def get_action(self, game_state: GameState, round_state: RoundState, active: int) -> Action:
@@ -104,12 +104,42 @@ class Player(Bot):
             min_cost = min_raise - my_pip # the cost of a minimum bet/raise
             max_cost = max_raise - my_pip # the cost of a maximum bet/raise
 
-        self.log.append("did stuff")
-        if RaiseAction in legal_actions and random() < 0.99:
-            return RaiseAction(max_raise)
-        if CheckAction in legal_actions:
+        rand_num = random.random()
+
+        if RaiseAction in legal_actions:
+            min_raise, max_raise = round_state.raise_bounds()  # the smallest and largest numbers of chips for a legal bet/raise
+            min_cost = min_raise - my_pip  # the cost of a minimum bet/raise
+            max_cost = max_raise - my_pip  # the cost of a maximum bet/raise
+
+            if rand_num < 0.6:
+                # 60% chance of raising
+                raise_amount = random.randint(min_raise, max_raise)
+                return RaiseAction(raise_amount)
+            elif rand_num < 0.8 and CallAction in legal_actions:
+                # 20% chance of calling
+                return CallAction()
+            elif CheckAction in legal_actions:
+                # 10% chance of checking
+                return CheckAction()
+            else:
+                # 10% chance of folding
+                return FoldAction()
+        elif CallAction in legal_actions:
+            if rand_num < 0.7 and CallAction in legal_actions:
+                # 70% chance of calling
+                return CallAction()
+            elif CheckAction in legal_actions:
+                # 20% chance of checking
+                return CheckAction()
+            else:
+                # 10% chance of folding
+                return FoldAction()
+        elif CheckAction in legal_actions:
+            # Always check if it's the only available action
             return CheckAction()
-        return CallAction()
+        else:
+            # Only FoldAction is available
+            return FoldAction()
 
 if __name__ == '__main__':
     run_bot(Player(), parse_args())
