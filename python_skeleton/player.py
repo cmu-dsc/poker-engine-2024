@@ -109,12 +109,13 @@ class Player(Bot):
 
         result = map(lambda x: evaluate([x[0], x[1]], my_cards) > evaluate([x[0], x[1]], [x[2]]), possible_card_comb)
         prob = sum(result) / len(possible_card_comb)
+        self.log.append(f"Winning probability: {prob}")
 
         if prob > 0.5 and RaiseAction in legal_actions:
             min_raise, max_raise = round_state.raise_bounds() # the smallest and largest numbers of chips for a legal bet/raise
             min_cost = min_raise - my_pip # the cost of a minimum bet/raise
             max_cost = max_raise - my_pip # the cost of a maximum bet/raise
-            raise_amount = random.randint(min_raise, max_raise)
+            raise_amount = min(int(min_raise*1.5), max_raise)
             action = RaiseAction(raise_amount)
         elif prob < 0.1 and FoldAction in legal_actions:
             action = FoldAction()

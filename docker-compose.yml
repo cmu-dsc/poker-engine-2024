@@ -26,10 +26,10 @@ services:
   bot2:
     build:
       context: .
-      dockerfile: dockerfiles/python_skeleton2/Dockerfile
+      dockerfile: dockerfiles/python_skeleton/Dockerfile
     volumes:
       - ./logs/bot2:/usr/src/app/logs
     depends_on:
       - engine
     expose:
-      - "50051"
+      - "50052"
