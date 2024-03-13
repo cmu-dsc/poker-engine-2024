@@ -47,6 +47,7 @@ class Player(Bot):
         #round_num = game_state.round_num # the round number from 1 to NUM_ROUNDS
         #my_cards = round_state.hands[active] # your cards
         #big_blind = bool(active) # True if you are the big blind
+        self.log.append("================================")
         self.log.append("new round")
         pass
 
@@ -68,7 +69,8 @@ class Player(Bot):
         #my_cards = previous_state.hands[active] # your cards
         #opp_cards = previous_state.hands[1-active] # opponent's cards or [] if not revealed
         self.log.append("game over")
-        
+        self.log.append("================================\n")
+
         if is_match_over:
             with open("logs/bot_log.txt", "w") as log_file:
                 log_file.write("\n".join(self.log))
@@ -90,7 +92,7 @@ class Player(Bot):
         """
         legal_actions = round_state.legal_actions() # the actions you are allowed to take
         street = round_state.street # 0, 1, or 2 representing pre-flop, flop, or river respectively
-        my_cards = list(round_state.hands[active]) # your cards
+        my_cards = list(round_state.hands[0]) # your cards
         board_cards = list(round_state.board) # the board cards
         my_pip = round_state.pips[active] # the number of chips you have contributed to the pot this round of betting
         opp_pip = round_state.pips[1 - active] # the number of chips your opponent has contributed to the pot this round of betting
@@ -102,6 +104,8 @@ class Player(Bot):
 
         self.log.append("My cards: " + str(my_cards))
         self.log.append("Board cards: " + str(board_cards))
+        self.log.append("My stack: " + str(my_stack))
+        self.log.append("My contribution: " + str(my_contribution))
 
         leftover_cards = [f"{rank}{suit}" for rank in "123456" for suit in "shd" if f"{rank}{suit}" not in my_cards + board_cards]
         possible_card_comb = list(itertools.permutations(leftover_cards, 3 - len(board_cards)))
@@ -109,22 +113,28 @@ class Player(Bot):
 
         result = map(lambda x: evaluate([x[0], x[1]], my_cards) > evaluate([x[0], x[1]], [x[2]]), possible_card_comb)
         prob = sum(result) / len(possible_card_comb)
+        expected_gain = prob * max(my_contribution, opp_contribution) - (1 - prob) * max(my_contribution, opp_contribution)
         self.log.append(f"Winning probability: {prob}")
+        self.log.append(f"Expected gain: {expected_gain}")
 
-        if prob > 0.5 and RaiseAction in legal_actions:
+        if continue_cost > 1:
+            prob = prob * 0.8
+            self.log.append(f"Adjusted Winning probability: {prob}")
+
+        if prob > 0.7 and RaiseAction in legal_actions:
             min_raise, max_raise = round_state.raise_bounds() # the smallest and largest numbers of chips for a legal bet/raise
             min_cost = min_raise - my_pip # the cost of a minimum bet/raise
             max_cost = max_raise - my_pip # the cost of a maximum bet/raise
             raise_amount = min(int(min_raise*1.5), max_raise)
             action = RaiseAction(raise_amount)
-        elif prob < 0.1 and FoldAction in legal_actions:
+        elif prob < 0.4 and continue_cost > 1 and FoldAction in legal_actions:
             action = FoldAction()
         elif CheckAction in legal_actions:
             action = CheckAction()
         else:
             action = CallAction()
 
-        self.log.append(str(action))
+        self.log.append(str(action) + "\n")
         return action
 
 if __name__ == '__main__':

@@ -26,7 +26,7 @@ services:
   bot2:
     build:
       context: .
-      dockerfile: dockerfiles/python_skeleton/Dockerfile
+      dockerfile: dockerfiles/python_skeleton2/Dockerfile
     volumes:
       - ./logs/bot2:/usr/src/app/logs
     depends_on:

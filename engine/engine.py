@@ -82,6 +82,8 @@ class Game:
             self.log.append(f"{self.players[1].name} shows {previous_state.hands[1]}")
         self.log.append(f"{self.players[0].name} awarded {round_state.deltas[0]}")
         self.log.append(f"{self.players[1].name} awarded {round_state.deltas[1]}")
+        self.log.append(f"{self.players[0].name} Bankroll: {self.players[0].bankroll}")
+        self.log.append(f"{self.players[1].name} Bankroll: {self.players[1].bankroll}")
 
     def run_round(self, last_round: bool) -> None:
         """
