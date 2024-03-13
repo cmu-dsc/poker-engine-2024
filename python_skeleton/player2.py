@@ -100,29 +100,30 @@ class Player(Bot):
         my_contribution = STARTING_STACK - my_stack # the number of chips you have contributed to the pot
         opp_contribution = STARTING_STACK - opp_stack # the number of chips your opponent has contributed to the pot
 
-        self.log.append("My cards: " + str(my_cards))
-        self.log.append("Board cards: " + str(board_cards))
+        # self.log.append("My cards: " + str(my_cards))
+        # self.log.append("Board cards: " + str(board_cards))
 
-        leftover_cards = [f"{rank}{suit}" for rank in "123456" for suit in "shd" if f"{rank}{suit}" not in my_cards + board_cards]
-        possible_card_comb = list(itertools.permutations(leftover_cards, 3 - len(board_cards)))
-        possible_card_comb = [board_cards + list(c) for c in possible_card_comb]
+        # leftover_cards = [f"{rank}{suit}" for rank in "123456" for suit in "shd" if f"{rank}{suit}" not in my_cards + board_cards]
+        # possible_card_comb = list(itertools.permutations(leftover_cards, 3 - len(board_cards)))
+        # possible_card_comb = [board_cards + list(c) for c in possible_card_comb]
 
-        result = map(lambda x: evaluate([x[0], x[1]], my_cards) > evaluate([x[0], x[1]], [x[2]]), possible_card_comb)
-        prob = sum(result) / len(possible_card_comb)
+        # result = map(lambda x: evaluate([x[0], x[1]], my_cards) > evaluate([x[0], x[1]], [x[2]]), possible_card_comb)
+        # prob = sum(result) / len(possible_card_comb)
 
-        if prob > 0.5 and RaiseAction in legal_actions:
-            min_raise, max_raise = round_state.raise_bounds() # the smallest and largest numbers of chips for a legal bet/raise
-            min_cost = min_raise - my_pip # the cost of a minimum bet/raise
-            max_cost = max_raise - my_pip # the cost of a maximum bet/raise
-            raise_amount = random.randint(min_raise, max_raise)
-            action = RaiseAction(raise_amount)
-        elif prob < 0.1 and FoldAction in legal_actions:
-            action = FoldAction()
-        elif CheckAction in legal_actions:
+        # if prob > 0.5 and RaiseAction in legal_actions:
+        #     min_raise, max_raise = round_state.raise_bounds() # the smallest and largest numbers of chips for a legal bet/raise
+        #     min_cost = min_raise - my_pip # the cost of a minimum bet/raise
+        #     max_cost = max_raise - my_pip # the cost of a maximum bet/raise
+        #     raise_amount = random.randint(min_raise, max_raise)
+        #     action = RaiseAction(raise_amount)
+        # elif prob < 0.1 and FoldAction in legal_actions:
+        #     action = FoldAction()
+
+        # Always check/call
+        if CheckAction in legal_actions:
             action = CheckAction()
         else:
             action = CallAction()
-
         self.log.append(str(action))
         return action
 
