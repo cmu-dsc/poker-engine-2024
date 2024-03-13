@@ -48,27 +48,72 @@ class Player:
         self.auth_token = auth_token
         self.game_clock = STARTING_GAME_CLOCK
         self.bankroll = 0
+        self.channel = None
+        self.stub = None
 
-        self.channel = grpc.insecure_channel(service_dns_name)
-        self.stub = PokerBotStub(self.channel)
+        self._connect_with_retries()
 
-    def check_ready(self, player_names: List[str]) -> bool:
+    def _connect_with_retries(
+        self, max_retries: int = 3, retry_interval: int = 3
+    ) -> None:
+        """
+        Establishes a connection to the gRPC server with retries.
+
+        Args:
+            max_retries (int): The maximum number of retries for establishing the connection.
+            retry_interval (int): The interval (in seconds) between each retry attempt.
+        """
+        for attempt in range(max_retries):
+            try:
+                self.channel = grpc.insecure_channel(self.service_dns_name)
+                self.stub = PokerBotStub(self.channel)
+                print(f"Connected to {self.service_dns_name} on attempt {attempt + 1}")
+                return
+            except grpc.RpcError as e:
+                print(f"Connection attempt {attempt + 1} failed: {e}")
+                if attempt < max_retries - 1:
+                    time.sleep(retry_interval)
+
+        raise RuntimeError(
+            f"Failed to connect to {self.service_dns_name} after {max_retries} attempts"
+        )
+
+    def check_ready(
+        self, player_names: List[str], max_retries: int = 3, retry_interval: int = 3
+    ) -> bool:
         """
         Sends a readiness check to the pokerbot to verify if it is ready to start or continue the game.
 
         Args:
             player_names (List[str]): A list of player names participating in the game.
+            max_retries (int): The maximum number of retries for the readiness check.
+            retry_interval (int): The interval (in seconds) between each retry attempt.
 
         Returns:
             bool: True if the bot is ready, False otherwise.
         """
         request = ReadyCheckRequest(player_names=player_names)
-        try:
-            response = self.stub.ReadyCheck(request, timeout=CHECK_READY_TIMEOUT)
-            return response.ready
-        except grpc.RpcError as e:
-            print(f"An error occurred: {e}")
-            return False
+        for attempt in range(max_retries):
+            try:
+                response = self.stub.ReadyCheck(request, timeout=CHECK_READY_TIMEOUT)
+                if response.ready:
+                    return True
+                else:
+                    print(
+                        f"Bot {self.name} is not ready. Retrying in {retry_interval} seconds."
+                    )
+                    time.sleep(retry_interval)
+            except grpc.RpcError as e:
+                print(
+                    f"An error occurred during readiness check for bot {self.name}: {e}"
+                )
+                if attempt < max_retries - 1:
+                    time.sleep(retry_interval)
+
+        print(
+            f"Bot {self.name} failed the readiness check after {max_retries} attempts."
+        )
+        return False
 
     def request_action(
         self, player_hand: List[str], board_cards: List[str], new_actions: Deque[Action]
