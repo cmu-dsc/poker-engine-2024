@@ -1,7 +1,7 @@
 """
 Simple example pokerbot, written in Python.
 """
-
+import itertools
 import random
 import sys
 
@@ -10,6 +10,7 @@ from skeleton.states import GameState, TerminalState, RoundState
 from skeleton.states import NUM_ROUNDS, STARTING_STACK, BIG_BLIND, SMALL_BLIND
 from skeleton.bot import Bot
 from skeleton.runner import parse_args, run_bot
+# from engine.evaluate import evaluate
 
 class Player(Bot):
     """
@@ -98,6 +99,32 @@ class Player(Bot):
         continue_cost = opp_pip - my_pip # the number of chips needed to stay in the pot
         my_contribution = STARTING_STACK - my_stack # the number of chips you have contributed to the pot
         opp_contribution = STARTING_STACK - opp_stack # the number of chips your opponent has contributed to the pot
+
+        self.log.append("My cards: " + str(my_cards))
+        self.log.append("Board cards: " + str(board_cards))
+        shown_cards = my_cards + board_cards
+
+        # leftover_cards = []
+        leftover_cards = [f"{rank}{suit}" for rank in "123456" for suit in "shd"]# if f"{rank}{suit}" not in my_cards + board_cards]
+        # possible_card_comb = list(itertools.permutations(leftover_cards, 3 - len(board_cards)))
+        # possible_card_comb = [list(c) for c in possible_card_comb]
+        # print(possible_card_comb)
+        # assert 0
+
+        # shown_card_comb = [board_cards for _ in range(len(possible_card_comb))]
+        # possible_card_comb = [c1 + c2 for c1, c2 in zip(shown_card_comb, possible_card_comb)]    
+        # print(len(possible_card_comb))
+
+        # def evaluate(hand: List[str], board: List[str]) -> int:
+
+        # result = map(lambda x: get_score([x[0], x[1], given_card]) > get_score([x[0], x[1], x[2]]), possible_card_comb)
+        # wins = sum(result)
+        # return  wins / len(possible_card_comb)
+
+
+
+
+
 
         if RaiseAction in legal_actions:
             min_raise, max_raise = round_state.raise_bounds() # the smallest and largest numbers of chips for a legal bet/raise
