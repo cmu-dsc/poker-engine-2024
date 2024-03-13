@@ -114,32 +114,34 @@ class Player(Bot):
             if rand_num < 0.6:
                 # 60% chance of raising
                 raise_amount = random.randint(min_raise, max_raise)
-                return RaiseAction(raise_amount)
+                action = RaiseAction(raise_amount)
             elif rand_num < 0.8 and CallAction in legal_actions:
                 # 20% chance of calling
-                return CallAction()
+                action = CallAction()
             elif CheckAction in legal_actions:
                 # 10% chance of checking
-                return CheckAction()
+                action = CheckAction()
             else:
                 # 10% chance of folding
-                return FoldAction()
+                action = FoldAction()
         elif CallAction in legal_actions:
             if rand_num < 0.7 and CallAction in legal_actions:
                 # 70% chance of calling
-                return CallAction()
+                action = CallAction()
             elif CheckAction in legal_actions:
                 # 20% chance of checking
-                return CheckAction()
+                action = CheckAction()
             else:
                 # 10% chance of folding
-                return FoldAction()
+                action = FoldAction()
         elif CheckAction in legal_actions:
             # Always check if it's the only available action
-            return CheckAction()
+            action = CheckAction()
         else:
             # Only FoldAction is available
-            return FoldAction()
+            action = FoldAction()
+        self.log.append(str(action))
+        return action
 
 if __name__ == '__main__':
     run_bot(Player(), parse_args())
