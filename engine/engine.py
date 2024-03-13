@@ -4,6 +4,7 @@ CMU Poker Bot Competition Game Engine 2024
 
 from collections import deque
 import os
+import time
 from typing import Deque, List
 
 from .actions import (
@@ -126,12 +127,14 @@ class Game:
         Runs one match of poker.
         """
         print("Starting the Poker Game...")
+        time.sleep(5)
         self.players = [
             Player(PLAYER_1_NAME, PLAYER_1_DNS),
             Player(PLAYER_2_NAME, PLAYER_2_DNS),
         ]
         player_names = [PLAYER_1_NAME, PLAYER_2_NAME]
 
+        time.sleep(5)
         print("Checking ready...")
         if not all(player.check_ready(player_names) for player in self.players):
             print("One or more bots are not ready. Aborting the match.")
