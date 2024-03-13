@@ -69,7 +69,7 @@ class Player(Bot):
         self.log.append("game over")
         
         if is_match_over:
-            with open("bot_log.txt", "w") as log_file:
+            with open("logs/bot_log.txt", "w") as log_file:
                 log_file.write("\n".join(self.log))
             # sys.exit(0) # why doesn't this shut the container down?
         pass

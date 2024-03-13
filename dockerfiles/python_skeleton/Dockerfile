@@ -13,6 +13,8 @@ COPY python_skeleton/ ./python_skeleton/
 
 COPY shared/ ./shared/
 
+VOLUME /usr/src/app/logs
+
 EXPOSE 50051
 
 CMD ["python", "python_skeleton/player.py"]

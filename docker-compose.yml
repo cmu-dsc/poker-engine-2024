@@ -16,6 +16,8 @@ services:
     build:
       context: .
       dockerfile: dockerfiles/python_skeleton/Dockerfile
+    volumes:
+      - ./logs/bot1:/usr/src/app/logs
     depends_on:
       - engine
     expose:
@@ -25,6 +27,8 @@ services:
     build:
       context: .
       dockerfile: dockerfiles/python_skeleton/Dockerfile
+    volumes:
+      - ./logs/bot2:/usr/src/app/logs
     depends_on:
       - engine
     expose:
