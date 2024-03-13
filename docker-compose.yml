@@ -25,6 +25,8 @@ services:
       dockerfile: dockerfiles/python_skeleton/Dockerfile
     volumes:
       - ./logs/bot1:/usr/src/app/logs
+      - ./python_skeleton:/usr/src/app/python_skeleton
+      - ./shared:/usr/src/app/shared
     expose:
       - "50051"
     networks:
@@ -37,6 +39,8 @@ services:
       dockerfile: dockerfiles/python_skeleton/Dockerfile
     volumes:
       - ./logs/bot2:/usr/src/app/logs
+      - ./python_skeleton:/usr/src/app/python_skeleton
+      - ./shared:/usr/src/app/shared
     expose:
       - "50051"
     networks:
