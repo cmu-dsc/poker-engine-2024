@@ -34,7 +34,7 @@ jobs:
       uses: actions/cache@v4
       with:
         path: /tmp/.buildx-cache
-        key: ${{ runner.os }}-buildx-${{ github.sha }}
+        key: ${{ runner.os }}-buildx-${{ hashFiles('python_skeleton/requirements.txt') }}
         restore-keys: |
           ${{ runner.os }}-buildx-
     
@@ -44,8 +44,8 @@ jobs:
       run: |
         docker buildx create --use
         docker buildx build \
-          --cache-from type=local,src=/tmp/.buildx-cache \
-          --cache-to type=local,dest=/tmp/.buildx-cache \
+          --cache-from type=local,src=/tmp/.buildx-cache,mode=max \
+          --cache-to type=local,dest=/tmp/.buildx-cache,mode=max \
           --platform linux/amd64 \
           --tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
           --file dockerfiles/python_skeleton/Dockerfile \
