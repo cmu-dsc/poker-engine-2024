@@ -1,6 +1,7 @@
 version: '3'
 services:
   engine:
+    container_name: engine
     build:
       context: .
       dockerfile: dockerfiles/engine/Dockerfile
@@ -11,25 +12,36 @@ services:
       - PLAYER_2_NAME=bot2
       - PLAYER_1_DNS=bot1:50051
       - PLAYER_2_DNS=bot2:50051
+    networks:
+      - pokerbot_network
+    depends_on:
+      - bot1
+      - bot2
 
   bot1:
+    container_name: pokerbot1
     build:
       context: .
       dockerfile: dockerfiles/python_skeleton/Dockerfile
     volumes:
       - ./logs/bot1:/usr/src/app/logs
-    depends_on:
-      - engine
     expose:
       - "50051"
+    networks:
+      - pokerbot_network
 
   bot2:
+    container_name: pokerbot2
     build:
       context: .
       dockerfile: dockerfiles/python_skeleton/Dockerfile
     volumes:
       - ./logs/bot2:/usr/src/app/logs
-    depends_on:
-      - engine
     expose:
       - "50051"
+    networks:
+      - pokerbot_network
+
+networks:
+  pokerbot_network:
+    name: pokerbot_network

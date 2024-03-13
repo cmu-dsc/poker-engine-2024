@@ -44,7 +44,7 @@ class Player(Bot):
         #my_bankroll = game_state.bankroll # the total number of chips you've gained or lost from the beginning of the game to the start of this round
         #game_clock = game_state.game_clock # the total number of seconds your bot has left to play this game
         #round_num = game_state.round_num # the round number from 1 to NUM_ROUNDS
-        #my_cards = round_state.hands[active] # your cards
+        #my_cards = round_state.hands[0] # your cards
         #big_blind = bool(active) # True if you are the big blind
         self.log.append("new round")
         pass
@@ -64,8 +64,8 @@ class Player(Bot):
         #my_delta = terminal_state.deltas[active] # your bankroll change from this round
         #previous_state = terminal_state.previous_state # RoundState before payoffs
         #street = previous_state.street # 0, 3, 4, or 5 representing when this round ended
-        #my_cards = previous_state.hands[active] # your cards
-        #opp_cards = previous_state.hands[1-active] # opponent's cards or [] if not revealed
+        #my_cards = previous_state.hands[0] # your cards
+        #opp_cards = previous_state.hands[1] # opponent's cards or [] if not revealed
         self.log.append("game over")
         
         if is_match_over:
@@ -89,7 +89,7 @@ class Player(Bot):
         """
         legal_actions = round_state.legal_actions() # the actions you are allowed to take
         street = round_state.street # 0, 1, or 2 representing pre-flop, flop, or river respectively
-        my_cards = round_state.hands[active] # your cards
+        my_cards = round_state.hands[0] # your cards
         board_cards = round_state.board # the board cards
         my_pip = round_state.pips[active] # the number of chips you have contributed to the pot this round of betting
         opp_pip = round_state.pips[1 - active] # the number of chips your opponent has contributed to the pot this round of betting
