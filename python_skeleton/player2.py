@@ -107,31 +107,28 @@ class Player(Bot):
         self.log.append("My stack: " + str(my_stack))
         self.log.append("My contribution: " + str(my_contribution))
 
-        # leftover_cards = [f"{rank}{suit}" for rank in "123456" for suit in "shd" if f"{rank}{suit}" not in my_cards + board_cards]
-        # possible_card_comb = list(itertools.permutations(leftover_cards, 3 - len(board_cards)))
-        # possible_card_comb = [board_cards + list(c) for c in possible_card_comb]
+        leftover_cards = [f"{rank}{suit}" for rank in "123456" for suit in "shd" if f"{rank}{suit}" not in my_cards + board_cards]
+        possible_card_comb = list(itertools.permutations(leftover_cards, 3 - len(board_cards)))
+        possible_card_comb = [board_cards + list(c) for c in possible_card_comb]
 
-        # result = map(lambda x: evaluate([x[0], x[1]], my_cards) > evaluate([x[0], x[1]], [x[2]]), possible_card_comb)
-        # prob = sum(result) / len(possible_card_comb)
-        # expected_gain = prob * max(my_contribution, opp_contribution) - (1 - prob) * max(my_contribution, opp_contribution)
-        # self.log.append(f"Winning probability: {prob}")
-        # self.log.append(f"Expected gain: {expected_gain}")
+        result = map(lambda x: evaluate([x[0], x[1]], my_cards) > evaluate([x[0], x[1]], [x[2]]), possible_card_comb)
+        prob = sum(result) / len(possible_card_comb)
+        expected_gain = prob * max(my_contribution, opp_contribution) - (1 - prob) * max(my_contribution, opp_contribution)
+        self.log.append(f"Winning probability: {prob}")
+        self.log.append(f"Expected gain: {expected_gain}")
 
-        # if continue_cost > 1:
-        #     prob = prob * 0.8
-        #     self.log.append(f"Adjusted Winning probability: {prob}")
+        if continue_cost > 1:
+            prob = prob * 0.8
+            self.log.append(f"Adjusted Winning probability: {prob}")
 
-        # if prob > 0.7 and RaiseAction in legal_actions:
-        #     min_raise, max_raise = round_state.raise_bounds() # the smallest and largest numbers of chips for a legal bet/raise
-        #     min_cost = min_raise - my_pip # the cost of a minimum bet/raise
-        #     max_cost = max_raise - my_pip # the cost of a maximum bet/raise
-        #     raise_amount = min(int(min_raise*1.5), max_raise)
-        #     action = RaiseAction(raise_amount)
-        # elif prob < 0.4 and continue_cost > 1 and FoldAction in legal_actions:
-        #     action = FoldAction()
-        if RaiseAction in legal_actions:
+        if prob > 0.7 and RaiseAction in legal_actions:
             min_raise, max_raise = round_state.raise_bounds() # the smallest and largest numbers of chips for a legal bet/raise
-            action = RaiseAction(max_raise)
+            min_cost = min_raise - my_pip # the cost of a minimum bet/raise
+            max_cost = max_raise - my_pip # the cost of a maximum bet/raise
+            raise_amount = min(int(min_raise*1.5), max_raise)
+            action = RaiseAction(raise_amount)
+        elif prob < 0.4 and continue_cost > 1 and FoldAction in legal_actions:
+            action = FoldAction()
         elif CheckAction in legal_actions:
             action = CheckAction()
         else:
