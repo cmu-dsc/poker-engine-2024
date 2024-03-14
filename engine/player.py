@@ -54,7 +54,7 @@ class Player:
         self._connect_with_retries()
 
     def _connect_with_retries(
-        self, max_retries: int = 5, retry_interval: int = 5
+        self, max_retries: int = 3, retry_interval: int = 3
     ) -> None:
         """
         Establishes a connection to the gRPC server with retries.
@@ -70,7 +70,7 @@ class Player:
                 print(f"Connected to {self.service_dns_name} on attempt {attempt + 1}")
                 return
             except grpc.RpcError as e:
-                print(f"Connection attempt {attempt + 1} failed: {e}")
+                print(f"Connection attempt {attempt + 1} failed, retrying in {retry_interval} seconds...")
                 if attempt < max_retries - 1:
                     time.sleep(retry_interval)
 
@@ -100,12 +100,12 @@ class Player:
                     return True
                 else:
                     print(
-                        f"Bot {self.name} is not ready. Retrying in {retry_interval} seconds."
+                        f"Bot {self.name} is not ready. Retrying in {retry_interval} seconds..."
                     )
                     time.sleep(retry_interval)
             except grpc.RpcError as e:
                 print(
-                    f"An error occurred during readiness check for bot {self.name}: {e}"
+                    f"Bot {self.name} is not ready. Retrying in {retry_interval} seconds..."
                 )
                 if attempt < max_retries - 1:
                     time.sleep(retry_interval)
