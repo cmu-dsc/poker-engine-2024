@@ -54,7 +54,7 @@ class Player:
         self._connect_with_retries()
 
     def _connect_with_retries(
-        self, max_retries: int = 3, retry_interval: int = 3
+        self, max_retries: int = 5, retry_interval: int = 5
     ) -> None:
         """
         Establishes a connection to the gRPC server with retries.
@@ -79,7 +79,7 @@ class Player:
         )
 
     def check_ready(
-        self, player_names: List[str], max_retries: int = 3, retry_interval: int = 3
+        self, player_names: List[str], max_retries: int = 5, retry_interval: int = 5
     ) -> bool:
         """
         Sends a readiness check to the pokerbot to verify if it is ready to start or continue the game.
