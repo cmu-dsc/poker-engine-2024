@@ -28,7 +28,7 @@ from .config import (
     STARTING_STACK,
 )
 from .evaluate import ShortDeck
-from .player import Player
+from .client import Client
 from .roundstate import RoundState
 
 
@@ -38,7 +38,7 @@ class Game:
     """
 
     def __init__(self) -> None:
-        self.players: List[Player] = []
+        self.players: List[Client] = []
         self.log: List[str] = [
             f"CMU Poker Bot Game - {PLAYER_1_NAME} vs {PLAYER_2_NAME}"
         ]
@@ -129,8 +129,8 @@ class Game:
         """
         print("Starting the Poker Game...")
         self.players = [
-            Player(PLAYER_1_NAME, PLAYER_1_DNS),
-            Player(PLAYER_2_NAME, PLAYER_2_DNS),
+            Client(PLAYER_1_NAME, PLAYER_1_DNS),
+            Client(PLAYER_2_NAME, PLAYER_2_DNS),
         ]
         player_names = [PLAYER_1_NAME, PLAYER_2_NAME]
 
@@ -140,6 +140,10 @@ class Game:
             return
         print("Starting match...")
         for round_num in range(1, NUM_ROUNDS + 1):
+            if round_num % 25 == 0:
+                print(f"Starting round {round_num}...")
+                print(f"{self.players[0].name} remaining time: {self.players[0].game_clock}")
+                print(f"{self.players[1].name} remaining time: {self.players[1].game_clock}")
             self.log.append(f"\nRound #{round_num}")
             self.run_round((round_num == NUM_ROUNDS))
             self.players = self.players[::-1]  # Alternate the dealer
@@ -156,7 +160,9 @@ class Game:
         log_filename = os.path.join(LOGS_DIRECTORY, f"{GAME_LOG_FILENAME}.txt")
         log_index = 1
         while os.path.exists(log_filename):
-            log_filename = os.path.join(LOGS_DIRECTORY, f"{GAME_LOG_FILENAME}_{log_index}.txt")
+            log_filename = os.path.join(
+                LOGS_DIRECTORY, f"{GAME_LOG_FILENAME}_{log_index}.txt"
+            )
             log_index += 1
 
         print(f"Writing {log_filename}")

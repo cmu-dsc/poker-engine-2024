@@ -1,8 +1,8 @@
 """
 Simple example pokerbot, written in Python.
 """
+
 import itertools
-import random
 import sys
 
 from skeleton.actions import Action, CallAction, CheckAction, FoldAction, RaiseAction
@@ -92,8 +92,8 @@ class Player(Bot):
         """
         legal_actions = round_state.legal_actions() # the actions you are allowed to take
         street = round_state.street # 0, 1, or 2 representing pre-flop, flop, or river respectively
-        my_cards = list(round_state.hands[0]) # your cards
-        board_cards = list(round_state.board) # the board cards
+        my_cards = round_state.hands[0] # your cards
+        board_cards = round_state.board # the board cards
         my_pip = round_state.pips[active] # the number of chips you have contributed to the pot this round of betting
         opp_pip = round_state.pips[1 - active] # the number of chips your opponent has contributed to the pot this round of betting
         my_stack = round_state.stacks[active] # the number of chips you have remaining
@@ -101,11 +101,13 @@ class Player(Bot):
         continue_cost = opp_pip - my_pip # the number of chips needed to stay in the pot
         my_contribution = STARTING_STACK - my_stack # the number of chips you have contributed to the pot
         opp_contribution = STARTING_STACK - opp_stack # the number of chips your opponent has contributed to the pot
+        my_bankroll = game_state.bankroll
 
         self.log.append("My cards: " + str(my_cards))
         self.log.append("Board cards: " + str(board_cards))
         self.log.append("My stack: " + str(my_stack))
         self.log.append("My contribution: " + str(my_contribution))
+        self.log.append("My bankroll: " + str(my_bankroll))
 
         leftover_cards = [f"{rank}{suit}" for rank in "123456" for suit in "shd" if f"{rank}{suit}" not in my_cards + board_cards]
         possible_card_comb = list(itertools.permutations(leftover_cards, 3 - len(board_cards)))

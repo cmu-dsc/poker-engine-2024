@@ -2,7 +2,8 @@ name: Build and Push Docker Image
 
 on:
   push:
-    branches: [main]
+    branches: [master]
+  workflow_dispatch:
 
 env:
   ECR_REGISTRY: 767397676741.dkr.ecr.us-east-1.amazonaws.com
@@ -15,18 +16,31 @@ jobs:
       id-token: write
       contents: read
     steps:
-      - uses: actions/checkout@v2
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          role-to-assume: arn:aws:iam::767397676741:role/github-actions-role
-          aws-region: us-east-1
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
-      - name: Build, tag, and push image to Amazon ECR
-        env:
-          IMAGE_TAG: ${{ github.event.repository.owner.login }}-${{ github.sha }} # images will be tagged by github repo owner name
-        run: |
-          docker build -f dockerfiles/python_skeleton/Dockerfile -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+    - uses: actions/checkout@v4
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: arn:aws:iam::767397676741:role/github-actions-role
+        aws-region: us-east-1
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+    - name: Cache Docker layers
+      uses: actions/cache@v4
+      with:
+        path: /tmp/.buildx-cache
+        key: ${{ runner.os }}-buildx-${{ hashFiles('python_skeleton/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-buildx-
+    - name: Build, tag, and push image to Amazon ECR
+      env:
+        IMAGE_TAG: ${{ github.event.repository.owner.login }}
+      run: |
+        docker buildx create --use
+        docker buildx build \
+          --cache-from type=local,src=/tmp/.buildx-cache,mode=max \
+          --cache-to type=local,dest=/tmp/.buildx-cache,mode=max \
+          --platform linux/amd64 \
+          --tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG-latest \
+          --file dockerfiles/python_skeleton/Dockerfile \
+          --push .

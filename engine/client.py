@@ -1,3 +1,4 @@
+import json
 import grpc
 import os
 import sys
@@ -6,10 +7,13 @@ from typing import Deque, List, Optional
 
 from .actions import Action, CallAction, CheckAction, FoldAction, RaiseAction
 from .config import (
-    CHECK_READY_TIMEOUT,
-    END_ROUND_TIMEOUT,
+    CONNECT_TIMEOUT,
+    CONNECT_RETRIES,
+    READY_CHECK_TIMEOUT,
+    READY_CHECK_RETRIES,
+    ACTION_REQUEST_TIMEOUT,
+    ACTION_REQUEST_RETRIES,
     ENFORCE_GAME_CLOCK,
-    REQUEST_ACTION_TIMEOUT,
     STARTING_GAME_CLOCK,
 )
 
@@ -26,7 +30,7 @@ from shared.pokerbot_pb2 import (  # noqa: E402
 )
 
 
-class Player:
+class Client:
     """
     Handles interactions with one player's pokerbot within the Kubernetes cluster,
     facilitating the communication between the game engine and the pokerbot for action requests and round updates.
@@ -48,9 +52,40 @@ class Player:
         self.auth_token = auth_token
         self.game_clock = STARTING_GAME_CLOCK
         self.bankroll = 0
+        self.channel = None
+        self.stub = None
 
-        self.channel = grpc.insecure_channel(service_dns_name)
+        self._connect_with_retries()
+
+    def _connect_with_retries(self) -> None:
+        """
+        Establishes a connection to the gRPC server with retries.
+        """
+        retry_options = {
+            "initial_backoff_ms": CONNECT_TIMEOUT * 1000,
+            "max_backoff_ms": CONNECT_TIMEOUT * 1000,
+            "max_attempts": CONNECT_RETRIES,
+            "retry_codes": [grpc.StatusCode.UNAVAILABLE.value],
+        }
+        channel_options = [
+            ("grpc.enable_retries", 1),
+            ("grpc.max_receive_message_length", -1),
+            ("grpc.max_send_message_length", -1),
+            ("grpc.lb_policy_name", "round_robin"),
+            ("grpc.service_config", json.dumps({"retryPolicy": retry_options})),
+        ]
+        self.channel = grpc.insecure_channel(
+            self.service_dns_name, options=channel_options
+        )
         self.stub = PokerBotStub(self.channel)
+
+        try:
+            grpc.channel_ready_future(self.channel).result()
+            print(f"Connected to {self.service_dns_name}")
+        except grpc.FutureTimeoutError:
+            raise RuntimeError(
+                f"Failed to connect to {self.service_dns_name} after {CONNECT_RETRIES} attempts"
+            )
 
     def check_ready(self, player_names: List[str]) -> bool:
         """
@@ -62,19 +97,37 @@ class Player:
         Returns:
             bool: True if the bot is ready, False otherwise.
         """
-        request = ReadyCheckRequest(player_names=player_names)
-        try:
-            response = self.stub.ReadyCheck(request, timeout=CHECK_READY_TIMEOUT)
-            return response.ready
-        except grpc.RpcError as e:
-            print(f"An error occurred: {e}")
-            return False
+        retry_options = {
+            "initial_backoff_ms": READY_CHECK_TIMEOUT * 1000,
+            "max_backoff_ms": READY_CHECK_TIMEOUT * 1000,
+            "max_attempts": READY_CHECK_RETRIES,
+            "retry_codes": [grpc.StatusCode.UNAVAILABLE.value],
+        }
+        channel_options = [
+            ("grpc.enable_retries", 1),
+            ("grpc.max_receive_message_length", -1),
+            ("grpc.max_send_message_length", -1),
+            ("grpc.lb_policy_name", "round_robin"),
+            ("grpc.service_config", json.dumps({"retryPolicy": retry_options})),
+        ]
+        with grpc.insecure_channel(
+            self.service_dns_name, options=channel_options
+        ) as channel:
+            stub = PokerBotStub(channel)
+            request = ReadyCheckRequest(player_names=player_names)
+            try:
+                response = stub.ReadyCheck(request)
+                return response.ready
+            except grpc.RpcError as e:
+                print(f"Bot {self.name} is not ready: {e}")
+                return False
 
     def request_action(
         self, player_hand: List[str], board_cards: List[str], new_actions: Deque[Action]
     ) -> Optional[Action]:
         """
-        Requests an action from the pokerbot based on the current game state, including the player's hand, visible board cards, and new actions.
+        Requests an action from the pokerbot based on the current game state, including the player's hand,
+        visible board cards, and new actions.
 
         Args:
             player_hand (List[str]): The cards currently held by the player.
@@ -84,33 +137,50 @@ class Player:
         Returns:
             Optional[Action]: The action decided by the pokerbot, or None if an error occurred.
         """
-        proto_actions = self._convert_actions_to_proto(new_actions)
+        retry_options = {
+            "initial_backoff_ms": ACTION_REQUEST_TIMEOUT * 1000,
+            "max_backoff_ms": ACTION_REQUEST_TIMEOUT * 1000,
+            "max_attempts": ACTION_REQUEST_RETRIES,
+            "retry_codes": [grpc.StatusCode.UNAVAILABLE.value],
+        }
+        channel_options = [
+            ("grpc.enable_retries", 1),
+            ("grpc.max_receive_message_length", -1),
+            ("grpc.max_send_message_length", -1),
+            ("grpc.lb_policy_name", "round_robin"),
+            ("grpc.service_config", json.dumps({"retryPolicy": retry_options})),
+        ]
+        with grpc.insecure_channel(
+            self.service_dns_name, options=channel_options
+        ) as channel:
+            stub = PokerBotStub(channel)
+            proto_actions = self._convert_actions_to_proto(new_actions)
 
-        request = ActionRequest(
-            game_clock=self.game_clock,
-            player_hand=player_hand,
-            board_cards=board_cards,
-            new_actions=proto_actions,
-        )
+            request = ActionRequest(
+                game_clock=self.game_clock,
+                player_hand=player_hand,
+                board_cards=board_cards,
+                new_actions=proto_actions,
+            )
 
-        start_time = time.perf_counter()
+            start_time = time.perf_counter()
 
-        try:
-            response = self.stub.RequestAction(request, timeout=REQUEST_ACTION_TIMEOUT)
-            action = self._convert_proto_to_action(response.action)
-        except grpc.RpcError as e:
-            print(f"An error occurred: {e}")
-            action = None
+            try:
+                response = stub.RequestAction(request)
+                action = self._convert_proto_to_action(response.action)
+            except grpc.RpcError as e:
+                print(f"An error occurred: {e}")
+                action = None
 
-        end_time = time.perf_counter()
-        duration = end_time - start_time
+            end_time = time.perf_counter()
+            duration = end_time - start_time
 
-        if ENFORCE_GAME_CLOCK:
-            self.game_clock -= duration
-        if self.game_clock <= 0:
-            raise TimeoutError("Game clock has run out")
+            if ENFORCE_GAME_CLOCK:
+                self.game_clock -= duration
+            if self.game_clock <= 0:
+                raise TimeoutError("Game clock has run out")
 
-        return action
+            return action
 
     def end_round(
         self,
@@ -129,6 +199,7 @@ class Player:
             opponent_hand (List[str]): The final hand of the opponent.
             board_cards (List[str]): The cards visible on the board.
             new_actions (Deque[Action]): Any actions that occurred after the last action request.
+            delta (int): The change in the player's bankroll after the round.
             is_match_over (bool): Indicates whether the match has concluded.
         """
         proto_actions = self._convert_actions_to_proto(new_actions)
@@ -143,7 +214,7 @@ class Player:
         )
 
         try:
-            self.stub.EndRound(end_round_message, timeout=END_ROUND_TIMEOUT)
+            self.stub.EndRound(end_round_message)
         except grpc.RpcError as e:
             print(f"An error occurred: {e}")
 
@@ -165,7 +236,8 @@ class Player:
                 proto_actions.append(proto_action)
         return proto_actions
 
-    def _convert_proto_to_action(self, proto_action: ProtoAction) -> Optional[Action]:
+    @staticmethod
+    def _convert_proto_to_action(proto_action: ProtoAction) -> Optional[Action]:
         """
         Converts a protobuf Action message back to a Python-native Action object.
 
@@ -186,7 +258,8 @@ class Player:
         else:
             return None
 
-    def _convert_action_to_proto(self, action: Action) -> Optional[ProtoAction]:
+    @staticmethod
+    def _convert_action_to_proto(action: Action) -> Optional[ProtoAction]:
         """
         Converts a single Action object to its corresponding protobuf Action message.
 

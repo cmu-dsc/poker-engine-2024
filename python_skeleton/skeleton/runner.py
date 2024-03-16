@@ -90,7 +90,7 @@ class Runner(PokerBotServicer):
         )
 
         if self.round_flag:  # new hand
-            self._new_round(request.player_hand, request.board_cards)
+            self._new_round(list(request.player_hand), list(request.board_cards))
         else:
             self.round_state = RoundState(  # update the board cards
                 self.round_state.button,
@@ -98,7 +98,7 @@ class Runner(PokerBotServicer):
                 self.round_state.pips,
                 self.round_state.stacks,
                 self.round_state.hands,
-                request.board_cards,
+                list(request.board_cards),
                 self.round_state.previous_state,
             )
 
@@ -122,12 +122,11 @@ class Runner(PokerBotServicer):
             context (grpc.ServicerContext): The gRPC context.
         """
         if self.round_flag:
-            self._new_round(request.player_hand, request.board_cards)
+            self._new_round(list(request.player_hand), list(request.board_cards))
         if isinstance(self.round_state, TerminalState):
             self.round_state = self.round_state.previous_state
-        opponent_hand = request.opponent_hand
-        hands = list(self.round_state.hands)
-        hands[1 - self.active] = opponent_hand
+        hands = self.round_state.hands
+        hands[1] = list(request.opponent_hand)
         self.round_state = RoundState(
             button=self.round_state.button,
             street=self.round_state.street,
