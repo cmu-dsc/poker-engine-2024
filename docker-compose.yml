@@ -36,7 +36,7 @@ services:
     container_name: pokerbot2
     build:
       context: .
-      dockerfile: dockerfiles/python_skeleton/Dockerfile
+      dockerfile: dockerfiles/python_skeleton2/Dockerfile
     volumes:
       - ./logs/bot2:/usr/src/app/logs
       - ./python_skeleton:/usr/src/app/python_skeleton
