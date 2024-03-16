@@ -82,6 +82,8 @@ class Game:
             self.log.append(f"{self.players[1].name} shows {previous_state.hands[1]}")
         self.log.append(f"{self.players[0].name} awarded {round_state.deltas[0]}")
         self.log.append(f"{self.players[1].name} awarded {round_state.deltas[1]}")
+        self.log.append(f"{self.players[0].name} Bankroll: {self.players[0].bankroll}")
+        self.log.append(f"{self.players[1].name} Bankroll: {self.players[1].bankroll}")
 
     def run_round(self, last_round: bool) -> None:
         """
@@ -138,6 +140,14 @@ class Game:
             return
         print("Starting match...")
         for round_num in range(1, NUM_ROUNDS + 1):
+            if round_num % 50 == 0:
+                print(f"Starting round {round_num}...")
+                print(
+                    f"{self.players[0].name} remaining time: {self.players[0].game_clock}"
+                )
+                print(
+                    f"{self.players[1].name} remaining time: {self.players[1].game_clock}"
+                )
             self.log.append(f"\nRound #{round_num}")
             self.run_round((round_num == NUM_ROUNDS))
             self.players = self.players[::-1]  # Alternate the dealer
