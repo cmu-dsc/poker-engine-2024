@@ -12,6 +12,7 @@ services:
       - PLAYER_2_NAME=bot2
       - PLAYER_1_DNS=bot1:50051
       - PLAYER_2_DNS=bot2:50051
+      - PYTHONUNBUFFERED=1
     networks:
       - pokerbot_network
     depends_on:
@@ -31,6 +32,8 @@ services:
       - "50051"
     networks:
       - pokerbot_network
+    environment:
+      - PYTHONUNBUFFERED=1
 
   bot2:
     container_name: pokerbot2
@@ -45,6 +48,8 @@ services:
       - "50051"
     networks:
       - pokerbot_network
+    environment:
+      - PYTHONUNBUFFERED=1
 
 networks:
   pokerbot_network:
