@@ -10,4 +10,4 @@ RaiseAction = namedtuple("RaiseAction", ["amount"])
 Action = Union[FoldAction, CallAction, CheckAction, RaiseAction]
 TerminalState = namedtuple("TerminalState", ["deltas", "previous_state"])
 
-STREET_NAMES = ['Preflop', 'Flop', 'River']
+STREET_NAMES = ["Preflop", "Flop", "River"]
