@@ -46,14 +46,11 @@ jobs:
       - id: docker-push-tagged
         name: Tag Docker image and push to Google Artifact Registry
         uses: docker/build-push-action@v5
-        env:
-          GAR_LOCATION: us-east4
-          GAR_REPOSITORY: pokerai-registry
         with:
           push: true
           tags: |
-            $GAR_LOCATION-docker.pkg.dev/pokerai-417521/$GAR_REPOSITORY/${{ github.repository_owner }}:${{ steps.get-tag.outputs.short_ref }}
-            $GAR_LOCATION-docker.pkg.dev/pokerai-417521/$GAR_REPOSITORY/${{ github.repository_owner }}:latest
+            us-east4-docker.pkg.dev/pokerai-417521/pokerai-registry/${{ github.repository_owner }}:${{ steps.get-tag.outputs.short_ref }}
+            us-east4-docker.pkg.dev/pokerai-417521/pokerai-registry/${{ github.repository_owner }}:latest
           # cache-from: type=local,src=/tmp/.buildx-cache,mode=max
           # cache-to: type=local,dest=/tmp/.buildx-cache,mode=max
           file: dockerfiles/python_skeleton/Dockerfile
