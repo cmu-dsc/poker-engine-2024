@@ -19,7 +19,7 @@ jobs:
         uses: google-github-actions/auth@v2
         with:
           token_format: access_token
-          workload_identity_provider: 'projects/979321260256/locations/global/workloadIdentityPools/github/providers/github-actions'
+          workload_identity_provider: 'projects/979321260256/locations/global/workloadIdentityPools/github/providers/github'
           service_account: 'artifact-registry@pokerai-417521.iam.gserviceaccount.com'
           access_token_lifetime: 300s
 
