@@ -12,18 +12,19 @@ jobs:
       id-token: write
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - id: checkout
+        uses: actions/checkout@v4
       
-      - name: Authenticate to Google Cloud
+      - id: auth
         uses: google-github-actions/auth@v2
         with:
+          token_format: access_token
           workload_identity_provider: 'projects/979321260256/locations/global/workloadIdentityPools/github/providers/github-actions'
           service_account: 'artifact-registry@pokerai-417521.iam.gserviceaccount.com'
+          access_token_lifetime: 300s
 
-      - name: Configure Docker to use the gcloud command-line tool as a credential helper
-        run: gcloud auth configure-docker
-
-      - name: Cache Docker layers
+      - id: cache
+        name: Cache Docker layers
         uses: actions/cache@v4
         with:
           path: /tmp/.buildx-cache
@@ -31,16 +32,28 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-buildx-
 
-      - name: Build, tag, and push image to Google Artifact Registry
+      - name: Login to Artifact Registry
+        uses: docker/login-action@v3
+        with:
+          registry: us-east4-docker.pkg.dev
+          username: oauth2accesstoken
+          password: ${{ steps.auth.outputs.access_token }}
+      
+      - name: Get tag
+        id: get-tag
+        run: echo ::set-output name=short_ref::${GITHUB_REF#refs/*/}
+
+      - id: docker-push-tagged
+        name: Tag Docker image and push to Google Artifact Registry
+        uses: docker/build-push-action@v5
         env:
           GAR_LOCATION: us-east4
           GAR_REPOSITORY: pokerai-registry
-        run: |
-          docker buildx create --use
-          docker buildx build \
-            --cache-from type=local,src=/tmp/.buildx-cache,mode=max \
-            --cache-to type=local,dest=/tmp/.buildx-cache,mode=max \
-            --platform linux/amd64 \
-            --tag $GAR_LOCATION-docker.pkg.dev/pokerai-417521/$GAR_REPOSITORY/${{ github.repository_owner }}:latest \
-            --file dockerfiles/python_skeleton/Dockerfile \
-            --push .
+        with:
+          push: true
+          tags: |
+            $GAR_LOCATION-docker.pkg.dev/pokerai-417521/$GAR_REPOSITORY/${{ github.repository_owner }}:${{ steps.get-tag.outputs.short_ref }}
+            $GAR_LOCATION-docker.pkg.dev/pokerai-417521/$GAR_REPOSITORY/${{ github.repository_owner }}:latest
+          cache-from: type=local,src=/tmp/.buildx-cache,mode=max
+          cache-to: type=local,dest=/tmp/.buildx-cache,mode=max
+          file: dockerfiles/python_skeleton/Dockerfile
