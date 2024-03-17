@@ -54,6 +54,6 @@ jobs:
           tags: |
             $GAR_LOCATION-docker.pkg.dev/pokerai-417521/$GAR_REPOSITORY/${{ github.repository_owner }}:${{ steps.get-tag.outputs.short_ref }}
             $GAR_LOCATION-docker.pkg.dev/pokerai-417521/$GAR_REPOSITORY/${{ github.repository_owner }}:latest
-          cache-from: type=local,src=/tmp/.buildx-cache,mode=max
-          cache-to: type=local,dest=/tmp/.buildx-cache,mode=max
+          # cache-from: type=local,src=/tmp/.buildx-cache,mode=max
+          # cache-to: type=local,dest=/tmp/.buildx-cache,mode=max
           file: dockerfiles/python_skeleton/Dockerfile
