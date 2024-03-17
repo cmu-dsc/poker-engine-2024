@@ -38,9 +38,9 @@ jobs:
         run: |
           docker buildx create --use
           docker buildx build \
-            --cache-from type=local,src=/tmp/.buildx-cache \
-            --cache-to type=local,dest=/tmp/.buildx-cache \
+            --cache-from type=local,src=/tmp/.buildx-cache,mode=max \
+            --cache-to type=local,dest=/tmp/.buildx-cache,mode=max \
             --platform linux/amd64 \
             --tag $GAR_LOCATION-docker.pkg.dev/pokerai-417521/$GAR_REPOSITORY/${{ github.repository_owner }}:latest \
-            --file Dockerfile \
+            --file dockerfiles/python_skeleton/Dockerfile \
             --push .
