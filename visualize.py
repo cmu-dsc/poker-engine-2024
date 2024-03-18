@@ -117,7 +117,7 @@ def get_poker_table(round_log, action_num):
 
 def visualize(logs):
     # Choose a round to display
-    round_num = st.slider("Choose a round", 1, len(logs), 1, on_change=renew_action_num)
+    round_num = st.slider("Choose a round", 1, len(logs)-1, 1, on_change=renew_action_num)
 
     # Expander for the logs
     with st.expander("Round Logs"):
