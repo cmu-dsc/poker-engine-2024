@@ -1,5 +1,4 @@
 import os
-import boto3
 
 # PARAMETERS TO CONTROL THE BEHAVIOR OF THE GAME ENGINE
 
@@ -37,18 +36,3 @@ NUM_ROUNDS = 1000
 STARTING_STACK = 400
 BIG_BLIND = 2
 SMALL_BLIND = 1
-
-
-def upload_log_to_s3(log_filename):
-    """Uploads a log file to S3 if a bucket name is configured."""
-    S3_BUCKET_NAME = os.getenv("S3_BUCKET_NAME")
-
-    if S3_BUCKET_NAME:
-        s3 = boto3.client("s3")
-        try:
-            s3.upload_file(log_filename, S3_BUCKET_NAME, log_filename)
-            print(f"Uploaded {log_filename} to S3 bucket {S3_BUCKET_NAME}")
-        except boto3.exceptions.S3UploadFailedError as e:
-            print(f"Failed to upload {log_filename} to S3: {e}")
-    else:
-        print("S3_BUCKET_NAME not set. Skipping upload.")
