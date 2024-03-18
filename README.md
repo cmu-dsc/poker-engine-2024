@@ -30,6 +30,13 @@ Brew: `brew cask install docker`
 
 ## To visualize
 
+### Use the deployed app
+
+https://cmu-poker-ai-2024.streamlit.app/
+
+
+### Run locally
+
 Make sure you have the environment set up as in the previous section.
 
 ```bash
