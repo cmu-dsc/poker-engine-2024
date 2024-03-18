@@ -1,6 +1,8 @@
+import csv
 from datetime import datetime
+from io import StringIO
 import os
-from typing import List
+from typing import List, Union
 
 from google.auth import default
 from google.auth.exceptions import DefaultCredentialsError
@@ -55,12 +57,12 @@ def get_credentials():
         return None
 
 
-def upload_logs(log: List[str], log_filename: str) -> bool:
+def upload_logs(log: Union[List[str], List[List[str]]], log_filename: str) -> bool:
     """
     Uploads the logs to a Google Cloud Storage bucket.
 
     Args:
-        log (List[str]): The list of log messages to upload.
+        log (Union[List[str], List[List[str]]]): The list of log messages or CSV rows to upload.
         log_filename (str): The filename to use for the uploaded log file.
 
     Returns:
@@ -72,15 +74,19 @@ def upload_logs(log: List[str], log_filename: str) -> bool:
         return False
 
     storage_client = storage.Client(credentials=credentials)
-
     bucket = storage_client.bucket(BUCKET_NAME)
 
     log_path = f"match_{MATCH_ID}/{log_filename}"
-
     blob = bucket.blob(log_path)
 
-    log_content = "\n".join(log)
-    blob.upload_from_string(log_content)
+    if isinstance(log[0], str):
+        log_content = "\n".join(log)
+        blob.upload_from_string(log_content)
+    else:
+        csv_buffer = StringIO()
+        csv_writer = csv.writer(csv_buffer)
+        csv_writer.writerows(log)
+        blob.upload_from_string(csv_buffer.getvalue(), content_type="text/csv")
 
     print(f"Logs uploaded to {BUCKET_NAME}/{log_path}")
     return True
