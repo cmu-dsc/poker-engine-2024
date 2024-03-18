@@ -3,7 +3,6 @@ CMU Poker Bot Competition Game Engine 2024
 """
 
 from collections import deque
-from io import StringIO
 import os
 from typing import Deque, List
 import csv
