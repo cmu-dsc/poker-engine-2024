@@ -1,10 +1,11 @@
 """
 CMU Poker Bot Competition Game Engine 2024
 """
-
+import gymnasium as gym
+from gymnasium import spaces
 from collections import deque
 import os
-from typing import Deque, List
+from typing import Deque, List, SupportsFloat
 
 from .actions import (
     STREET_NAMES,
@@ -32,17 +33,97 @@ from .client import Client
 from .roundstate import RoundState
 
 
-class Game:
+class Game(gym.Env):
     """
     Manages logging and the high-level game procedure.
     """
-
-    def __init__(self) -> None:
+    def __init__(self, enable_log=True) -> None:
+        super().__init__()
         self.players: List[Client] = []
         self.log: List[str] = [
             f"CMU Poker Bot Game - {PLAYER_1_NAME} vs {PLAYER_2_NAME}"
         ]
         self.new_actions: List[Deque[Action]] = [deque(), deque()]
+
+        # Action space is a Box with 4 dimensions, each representing the amount of chips to bet
+        # 0: Fold, 1: Call, 2: Check, 3: Raise
+        self.action_space = spaces.Box(low=0, high=400, shape=(4,), dtype=int)
+
+        # Observation space is a Dict. 
+        # Since we have two players, is_my_turn is a Discrete(2)
+        # Make sure to check is_my_turn before taking an action
+        self.observation_space = spaces.Dict({
+            "is_my_turn": spaces.Discrete(2),
+            "legal_actions": spaces.MultiBinary(4),
+            "street": spaces.Discrete(3),
+            "my_cards": spaces.Text(),
+            "board_cards": spaces.Tuple(spaces.Text(), spaces.Text(), spaces.Text()),
+            "my_pip": spaces.Box(low=0, high=400, shape=(), dtype=int),
+            "opponent_pip": spaces.Box(low=0, high=400, shape=(), dtype=int),
+            "my_stack": spaces.Box(low=0, high=400, shape=(), dtype=int),
+            "opponent_stack": spaces.Box(low=0, high=400, shape=(), dtype=int),
+            "my_bankroll": spaces.Box(low=-400*NUM_ROUNDS, high=400*NUM_ROUNDS, shape=(), dtype=int),
+        })
+        self.curr_round_state = None
+        self.enable_log = enable_log
+
+
+    def _get_observation(self, player_num: int):
+        """
+        Returns the observation for the player_num player.
+        """
+        round_state = self.curr_round_state
+        legal_actions = round_state.legal_actions()
+        my_pip = round_state.pips[player_num]
+        opponent_pip = round_state.pips[1 - player_num]
+        my_stack = round_state.stacks[player_num]
+        opponent_stack = round_state.stacks[1 - player_num]
+        my_bankroll = round_state.bankroll[player_num]
+        return {
+            "is_my_turn": round_state.button % 2 == player_num,
+            "legal_actions": legal_actions,
+            "street": round_state.street,
+            "my_cards": round_state.hands[player_num],
+            "board_cards": round_state.board,
+            "my_pip": my_pip,
+            "opponent_pip": opponent_pip,
+            "my_stack": my_stack,
+            "opponent_stack": opponent_stack,
+            "my_bankroll": my_bankroll,
+        }
+
+    def _end_round(self, round_state: TerminalState):
+        """
+        Ends the round, updating the bankrolls of the players.
+        Returns the final observation
+        """
+        for index, (player, delta) in enumerate(zip(self.players, round_state.deltas)):
+            player.end_round(
+                self.curr_hands[index],
+                self.curr_hands[1 - index],
+                round_state.board,
+                self.new_actions[index],
+                delta,
+                self.last_round,
+            )
+            player.bankroll += delta
+        active = round_state.button % 2
+        return self._get_observation(active), delta, True, False, None
+
+    def step(self, action):
+        """
+        Takes a step in the game, given the action taken by the active player.
+        """
+        if self.enable_log: self.log_round_state(self.curr_round_state)
+        active = self.curr_round_state.button % 2
+        player = self.players[active]
+        action = self._validate_action(action, self.curr_round_state, player.name)
+
+        # If the round is over, return the final observation and reward    
+        if isinstance(self.curr_round_state, TerminalState):
+            return self._end_round(self.curr_round_state)
+
+        return self._get_observation(active), 0, False, False, None
 
     def log_round_state(self, round_state) -> None:
         """
