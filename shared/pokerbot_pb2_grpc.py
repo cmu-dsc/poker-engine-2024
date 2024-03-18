@@ -2,7 +2,6 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
 import pokerbot_pb2 as pokerbot__pb2
 
 
@@ -28,7 +27,7 @@ class PokerBotStub(object):
         self.EndRound = channel.unary_unary(
                 '/poker.PokerBot/EndRound',
                 request_serializer=pokerbot__pb2.EndRoundMessage.SerializeToString,
-                response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+                response_deserializer=pokerbot__pb2.EndRoundResponse.FromString,
                 )
 
 
@@ -72,7 +71,7 @@ def add_PokerBotServicer_to_server(servicer, server):
             'EndRound': grpc.unary_unary_rpc_method_handler(
                     servicer.EndRound,
                     request_deserializer=pokerbot__pb2.EndRoundMessage.FromString,
-                    response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+                    response_serializer=pokerbot__pb2.EndRoundResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -131,6 +130,6 @@ class PokerBot(object):
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/poker.PokerBot/EndRound',
             pokerbot__pb2.EndRoundMessage.SerializeToString,
-            google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+            pokerbot__pb2.EndRoundResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

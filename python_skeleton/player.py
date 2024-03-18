@@ -3,7 +3,7 @@ Simple example pokerbot, written in Python.
 """
 
 import random
-import sys
+from typing import Optional
 
 from skeleton.actions import Action, CallAction, CheckAction, FoldAction, RaiseAction
 from skeleton.states import GameState, TerminalState, RoundState
@@ -46,11 +46,12 @@ class Player(Bot):
         #round_num = game_state.round_num # the round number from 1 to NUM_ROUNDS
         #my_cards = round_state.hands[0] # your cards
         #big_blind = bool(active) # True if you are the big blind
+        self.log = []
         self.log.append("================================")
         self.log.append("new round")
         pass
 
-    def handle_round_over(self, game_state: GameState, terminal_state: TerminalState, active: int, is_match_over: bool) -> None:
+    def handle_round_over(self, game_state: GameState, terminal_state: TerminalState, active: int, is_match_over: bool) -> Optional[str]:
         """
         Called when a round ends. Called NUM_ROUNDS times.
 
@@ -60,7 +61,7 @@ class Player(Bot):
             active (int): Your player's index.
 
         Returns:
-            None
+            Your logs.
         """
         #my_delta = terminal_state.deltas[active] # your bankroll change from this round
         #previous_state = terminal_state.previous_state # RoundState before payoffs
@@ -70,11 +71,7 @@ class Player(Bot):
         self.log.append("game over")
         self.log.append("================================\n")
 
-        if is_match_over:
-            with open("logs/bot_log.txt", "w") as log_file:
-                log_file.write("\n".join(self.log))
-            # sys.exit(0) # why doesn't this shut the container down?
-        pass
+        return self.log
 
     def get_action(self, game_state: GameState, round_state: RoundState, active: int) -> Action:
         """

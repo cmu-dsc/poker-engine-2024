@@ -172,8 +172,17 @@ class Game:
         print(f"Writing {log_filename}")
         with open(log_filename, "w") as log_file:
             log_file.write("\n".join(self.log))
+            
+        for player in self.players:
+            log_directory = os.path.join(LOGS_DIRECTORY, player.name)
+            os.makedirs(log_directory, exist_ok=True)
+            
+            log_filename = os.path.join(log_directory, "debug.txt")
+            print(f"Writing {log_filename}")
+            with open(log_filename, "w") as log_file:
+                log_file.write("\n".join(player.log))
 
-        # Placeholder for uploading log, adjust as necessary
+        # Placeholder
         # upload_log_to_s3(log_filename)
 
     def _validate_action(
