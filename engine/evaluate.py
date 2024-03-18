@@ -25,7 +25,7 @@ class ShortDeck:
     """Custom deck for the poker variant with cards ranked 1 to 6 across 3 suits."""
 
     def __init__(self):
-        self.cards = [f"{rank}{suit}" for rank in "123456" for suit in "shd"]
+        self.cards = [f"{rank}{suit}" for rank in "234567" for suit in "shd"]
 
     def shuffle(self):
         """Shuffles the deck."""

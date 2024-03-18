@@ -3,6 +3,7 @@ CMU Poker Bot Competition Game Engine 2024
 """
 
 from collections import deque
+from io import StringIO
 import os
 from typing import Deque, List
 import csv
@@ -18,6 +19,7 @@ from .actions import (
 )
 from .config import (
     BIG_BLIND,
+    BOT_LOG_FILENAME,
     GAME_LOG_FILENAME,
     LOGS_DIRECTORY,
     NUM_ROUNDS,
@@ -27,6 +29,8 @@ from .config import (
     PLAYER_2_NAME,
     SMALL_BLIND,
     STARTING_STACK,
+    upload_logs,
+    add_match_entry,
 )
 from .evaluate import ShortDeck
 from .client import Client
@@ -181,7 +185,9 @@ class Game:
         if not all(player.check_ready(player_names) for player in self.players):
             print("One or more bots are not ready. Aborting the match.")
             return
+
         print("Starting match...")
+        original_players = self.players.copy()
         for self.round_num in range(1, NUM_ROUNDS + 1):
             if self.round_num % 50 == 0:
                 print(f"Starting round {self.round_num}...")
@@ -196,30 +202,55 @@ class Game:
             self.run_round((self.round_num == NUM_ROUNDS), self.round_num)
             self.players = self.players[::-1]  # Alternate the dealer
 
-        self.log.append(f"{self.players[0].name} Bankroll: {self.players[0].bankroll}")
-        self.log.append(f"{self.players[1].name} Bankroll: {self.players[1].bankroll}")
+        original_players
+        self.log.append(
+            f"{original_players[0].name} Bankroll: {original_players[0].bankroll}"
+        )
+        self.log.append(
+            f"{original_players[1].name} Bankroll: {original_players[1].bankroll}"
+        )
 
         self._finalize_log()
+        add_match_entry(original_players[0].bankroll, original_players[1].bankroll)
 
     def _finalize_log(self) -> None:
         """
         Finalizes the game log, writing it to a file and uploading it.
         """
-        csvlog_filename = os.path.join(LOGS_DIRECTORY, f"{GAME_LOG_FILENAME}.csv")
-        csvlog_index = 1
-        while os.path.exists(csvlog_filename):
-            csvlog_filename = os.path.join(
-                LOGS_DIRECTORY, f"{GAME_LOG_FILENAME}_{csvlog_index}.csv"
-            )
-            csvlog_index += 1
+        csv_filename = os.path.join(LOGS_DIRECTORY, f"{GAME_LOG_FILENAME}.csv")
+        self._upload_or_write_file(self.csvlog, csv_filename, is_csv=True)
 
-        with open(csvlog_filename, "w", newline="") as file:
-            writer = csv.writer(file)
-            # Write the data to the file
-            for row in self.csvlog:
-                writer.writerow(row)
+        log_filename = os.path.join(LOGS_DIRECTORY, f"{GAME_LOG_FILENAME}.txt")
+        self._upload_or_write_file(self.log, log_filename)
 
-        print(f'CSV file "{csvlog_filename}" has been created and populated with data.')
+        for player in self.players:
+            player_log_dir = os.path.join(LOGS_DIRECTORY, player.name)
+            log_filename = os.path.join(player_log_dir, f"{BOT_LOG_FILENAME}.txt")
+            self._upload_or_write_file(player.log, log_filename)
+
+    def _upload_or_write_file(self, content, base_filename, is_csv=False):
+        filename = self._get_unique_filename(base_filename)
+        if not upload_logs(content, filename):
+            os.makedirs(os.path.dirname(filename), exist_ok=True)
+            print(f"Writing {filename}")
+            mode = "w"
+            newline = "" if is_csv else None
+            with open(filename, mode, newline=newline) as file:
+                if is_csv:
+                    writer = csv.writer(file)
+                    writer.writerows(content)
+                else:
+                    file.write("\n".join(content))
+
+    @staticmethod
+    def _get_unique_filename(base_filename):
+        file_idx = 1
+        filename, ext = os.path.splitext(base_filename)
+        unique_filename = base_filename
+        while os.path.exists(unique_filename):
+            unique_filename = f"{filename}_{file_idx}{ext}"
+            file_idx += 1
+        return unique_filename
 
     def _validate_action(
         self, action: Action, round_state: RoundState, player_name: str

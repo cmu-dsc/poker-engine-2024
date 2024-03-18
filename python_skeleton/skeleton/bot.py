@@ -2,6 +2,7 @@
 This file contains the base class that you should implement for your pokerbot.
 """
 
+from typing import Optional
 from skeleton.actions import Action, FoldAction, CallAction, CheckAction, RaiseAction
 from skeleton.states import GameState, RoundState, TerminalState
 
@@ -29,7 +30,7 @@ class Bot:
 
     def handle_round_over(
         self, game_state: GameState, terminal_state: TerminalState, active: int, is_match_over: bool
-    ) -> None:
+    ) -> Optional[str]:
         """
         Called when a round ends. Called NUM_ROUNDS times.
 
@@ -40,7 +41,7 @@ class Bot:
         is_match_over: last round in the match
 
         Returns:
-        Nothing.
+        Your logs.
         """
         raise NotImplementedError("handle_round_over")
 
