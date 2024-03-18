@@ -1,11 +1,10 @@
 """
 CMU Poker Bot Competition Game Engine 2024
 """
-import gymnasium as gym
-from gymnasium import spaces
+
 from collections import deque
 import os
-from typing import Deque, List, SupportsFloat
+from typing import Deque, List
 
 from .actions import (
     STREET_NAMES,
@@ -18,6 +17,7 @@ from .actions import (
 )
 from .config import (
     BIG_BLIND,
+    BOT_LOG_FILENAME,
     GAME_LOG_FILENAME,
     LOGS_DIRECTORY,
     NUM_ROUNDS,
@@ -27,103 +27,25 @@ from .config import (
     PLAYER_2_NAME,
     SMALL_BLIND,
     STARTING_STACK,
+    upload_logs,
+    add_match_entry,
 )
 from .evaluate import ShortDeck
 from .client import Client
 from .roundstate import RoundState
 
 
-class Game(gym.Env):
+class Game:
     """
     Manages logging and the high-level game procedure.
     """
-    def __init__(self, enable_log=True) -> None:
-        super().__init__()
+
+    def __init__(self) -> None:
         self.players: List[Client] = []
         self.log: List[str] = [
             f"CMU Poker Bot Game - {PLAYER_1_NAME} vs {PLAYER_2_NAME}"
         ]
         self.new_actions: List[Deque[Action]] = [deque(), deque()]
-
-        # Action space is a Box with 4 dimensions, each representing the amount of chips to bet
-        # 0: Fold, 1: Call, 2: Check, 3: Raise
-        self.action_space = spaces.Box(low=0, high=400, shape=(4,), dtype=int)
-
-        # Observation space is a Dict. 
-        # Since we have two players, is_my_turn is a Discrete(2)
-        # Make sure to check is_my_turn before taking an action
-        self.observation_space = spaces.Dict({
-            "is_my_turn": spaces.Discrete(2),
-            "legal_actions": spaces.MultiBinary(4),
-            "street": spaces.Discrete(3),
-            "my_cards": spaces.Text(),
-            "board_cards": spaces.Tuple(spaces.Text(), spaces.Text(), spaces.Text()),
-            "my_pip": spaces.Box(low=0, high=400, shape=(), dtype=int),
-            "opponent_pip": spaces.Box(low=0, high=400, shape=(), dtype=int),
-            "my_stack": spaces.Box(low=0, high=400, shape=(), dtype=int),
-            "opponent_stack": spaces.Box(low=0, high=400, shape=(), dtype=int),
-            "my_bankroll": spaces.Box(low=-400*NUM_ROUNDS, high=400*NUM_ROUNDS, shape=(), dtype=int),
-        })
-        self.curr_round_state = None
-        self.enable_log = enable_log
-
-
-    def _get_observation(self, player_num: int):
-        """
-        Returns the observation for the player_num player.
-        """
-        round_state = self.curr_round_state
-        legal_actions = round_state.legal_actions()
-        my_pip = round_state.pips[player_num]
-        opponent_pip = round_state.pips[1 - player_num]
-        my_stack = round_state.stacks[player_num]
-        opponent_stack = round_state.stacks[1 - player_num]
-        my_bankroll = round_state.bankroll[player_num]
-        return {
-            "is_my_turn": round_state.button % 2 == player_num,
-            "legal_actions": legal_actions,
-            "street": round_state.street,
-            "my_cards": round_state.hands[player_num],
-            "board_cards": round_state.board,
-            "my_pip": my_pip,
-            "opponent_pip": opponent_pip,
-            "my_stack": my_stack,
-            "opponent_stack": opponent_stack,
-            "my_bankroll": my_bankroll,
-        }
-
-    def _end_round(self, round_state: TerminalState):
-        """
-        Ends the round, updating the bankrolls of the players.
-        Returns the final observation
-        """
-        for index, (player, delta) in enumerate(zip(self.players, round_state.deltas)):
-            player.end_round(
-                self.curr_hands[index],
-                self.curr_hands[1 - index],
-                round_state.board,
-                self.new_actions[index],
-                delta,
-                self.last_round,
-            )
-            player.bankroll += delta
-        active = round_state.button % 2
-        return self._get_observation(active), delta, True, False, None
-
-    def step(self, action):
-        """
-        Takes a step in the game, given the action taken by the active player.
-        """
-        if self.enable_log: self.log_round_state(self.curr_round_state)
-        active = self.curr_round_state.button % 2
-        player = self.players[active]
-        action = self._validate_action(action, self.curr_round_state, player.name)
-
-        # If the round is over, return the final observation and reward    
-        if isinstance(self.curr_round_state, TerminalState):
-            return self._end_round(self.curr_round_state)
-
-        return self._get_observation(active), 0, False, False, None
 
     def log_round_state(self, round_state) -> None:
         """
@@ -219,7 +141,9 @@ class Game(gym.Env):
         if not all(player.check_ready(player_names) for player in self.players):
             print("One or more bots are not ready. Aborting the match.")
             return
+
         print("Starting match...")
+        original_players = self.players.copy()
         for round_num in range(1, NUM_ROUNDS + 1):
             if round_num % 50 == 0:
                 print(f"Starting round {round_num}...")
@@ -233,29 +157,45 @@ class Game(gym.Env):
             self.run_round((round_num == NUM_ROUNDS))
             self.players = self.players[::-1]  # Alternate the dealer
 
-        self.log.append(f"{self.players[0].name} Bankroll: {self.players[0].bankroll}")
-        self.log.append(f"{self.players[1].name} Bankroll: {self.players[1].bankroll}")
+        original_players
+        self.log.append(f"{original_players[0].name} Bankroll: {original_players[0].bankroll}")
+        self.log.append(f"{original_players[1].name} Bankroll: {original_players[1].bankroll}")
 
         self._finalize_log()
+        add_match_entry(original_players[0].bankroll, original_players[1].bankroll)
 
     def _finalize_log(self) -> None:
         """
         Finalizes the game log, writing it to a file and uploading it.
         """
         log_filename = os.path.join(LOGS_DIRECTORY, f"{GAME_LOG_FILENAME}.txt")
-        log_index = 1
-        while os.path.exists(log_filename):
-            log_filename = os.path.join(
-                LOGS_DIRECTORY, f"{GAME_LOG_FILENAME}_{log_index}.txt"
-            )
-            log_index += 1
 
-        print(f"Writing {log_filename}")
-        with open(log_filename, "w") as log_file:
-            log_file.write("\n".join(self.log))
+        if not upload_logs(self.log, f"{GAME_LOG_FILENAME}.txt"):
+            os.makedirs(LOGS_DIRECTORY, exist_ok=True)
+            log_idx = 1
+            while os.path.exists(log_filename):
+                log_filename = os.path.join(
+                    LOGS_DIRECTORY, f"{GAME_LOG_FILENAME}_{log_idx}.txt"
+                )
+                log_idx += 1
+            print(f"Writing {log_filename}")
+            with open(log_filename, "w") as log_file:
+                log_file.write("\n".join(self.log))
 
-        # Placeholder for uploading log, adjust as necessary
-        # upload_log_to_s3(log_filename)
+        for player in self.players:
+            player_log_dir = os.path.join(LOGS_DIRECTORY, player.name)
+            log_filename = os.path.join(player_log_dir, f"{BOT_LOG_FILENAME}.txt")
+            if not upload_logs(player.log, f"{player.name}/{BOT_LOG_FILENAME}.txt"):
+                os.makedirs(player_log_dir, exist_ok=True)
+                log_idx = 1
+                while os.path.exists(log_filename):
+                    log_filename = os.path.join(
+                        player_log_dir, f"{BOT_LOG_FILENAME}_{log_idx}.txt"
+                    )
+                    log_idx += 1
+                print(f"Writing {log_filename}")
+                with open(log_filename, "w") as log_file:
+                    log_file.write("\n".join(player.log))
 
     def _validate_action(
         self, action: Action, round_state: RoundState, player_name: str

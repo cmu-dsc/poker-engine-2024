@@ -4,13 +4,9 @@
 
 ### As subprocesses
 
-(Recommended steps)
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-```
-
-```bash
 pip install -r ./engine/requirements.txt
 pip install -r ./python_skeleton/requirements.txt
 python run.py
@@ -45,5 +41,6 @@ pip install -r ./python_skeleton/requirements.txt
 ```
 
 ```bash
+pip install streamlit
 streamlit run visualize.py
 ```

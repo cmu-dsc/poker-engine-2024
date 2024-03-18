@@ -54,6 +54,7 @@ class Client:
         self.bankroll = 0
         self.channel = None
         self.stub = None
+        self.log = []
 
         self._connect_with_retries()
 
@@ -214,7 +215,7 @@ class Client:
         )
 
         try:
-            self.stub.EndRound(end_round_message)
+            self.log.extend(list(self.stub.EndRound(end_round_message).logs))
         except grpc.RpcError as e:
             print(f"An error occurred: {e}")
 
