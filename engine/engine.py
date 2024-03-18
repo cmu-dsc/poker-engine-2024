@@ -28,6 +28,7 @@ from .config import (
     SMALL_BLIND,
     STARTING_STACK,
     upload_logs,
+    add_match_entry,
 )
 from .evaluate import ShortDeck
 from .client import Client
@@ -140,7 +141,9 @@ class Game:
         if not all(player.check_ready(player_names) for player in self.players):
             print("One or more bots are not ready. Aborting the match.")
             return
+
         print("Starting match...")
+        original_players = self.players.copy()
         for round_num in range(1, NUM_ROUNDS + 1):
             if round_num % 50 == 0:
                 print(f"Starting round {round_num}...")
@@ -154,10 +157,12 @@ class Game:
             self.run_round((round_num == NUM_ROUNDS))
             self.players = self.players[::-1]  # Alternate the dealer
 
-        self.log.append(f"{self.players[0].name} Bankroll: {self.players[0].bankroll}")
-        self.log.append(f"{self.players[1].name} Bankroll: {self.players[1].bankroll}")
+        original_players
+        self.log.append(f"{original_players[0].name} Bankroll: {original_players[0].bankroll}")
+        self.log.append(f"{original_players[1].name} Bankroll: {original_players[1].bankroll}")
 
         self._finalize_log()
+        add_match_entry(original_players[0].bankroll, original_players[1].bankroll)
 
     def _finalize_log(self) -> None:
         """
