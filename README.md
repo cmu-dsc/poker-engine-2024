@@ -4,13 +4,9 @@
 
 ### As subprocesses
 
-(Recommended steps)
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-```
-
-```bash
 pip install -r ./engine/requirements.txt
 pip install -r ./python_skeleton/requirements.txt
 python run.py
@@ -26,4 +22,13 @@ Brew: `brew cask install docker`
 
 ```bash
 ./scripts/run_docker.sh
+```
+
+## To visualize
+
+Make sure you have installed dependencies as above.
+
+```bash
+pip install streamlit
+streamlit run visualize.py
 ```
