@@ -106,7 +106,7 @@ class Player(Bot):
         self.log.append("My contribution: " + str(my_contribution))
         self.log.append("My bankroll: " + str(my_bankroll))
 
-        leftover_cards = [f"{rank}{suit}" for rank in "123456" for suit in "shd" if f"{rank}{suit}" not in my_cards + board_cards]
+        leftover_cards = [f"{rank}{suit}" for rank in "234567" for suit in "shd" if f"{rank}{suit}" not in my_cards + board_cards]
         possible_card_comb = list(itertools.permutations(leftover_cards, 3 - len(board_cards)))
         possible_card_comb = [board_cards + list(c) for c in possible_card_comb]
 

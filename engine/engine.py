@@ -201,7 +201,6 @@ class Game:
             self.run_round((self.round_num == NUM_ROUNDS), self.round_num)
             self.players = self.players[::-1]  # Alternate the dealer
 
-        original_players
         self.log.append(
             f"{original_players[0].name} Bankroll: {original_players[0].bankroll}"
         )
