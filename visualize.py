@@ -6,6 +6,8 @@ from PIL import Image, ImageDraw, ImageFont
 def renew_action_num():
     st.session_state.action_num = 0
 
+def use_default_logs():
+    st.session_state.using_default_logs = True
 
 def card_name_to_full_name(card_name):
     number = card_name[0]
@@ -130,19 +132,26 @@ def visualize(logs):
 
 st.title('Poker AI visualizer')
 
+if "using_default_logs" not in st.session_state:
+    st.session_state.using_default_logs = False
+
 # Upload logs
 st.write("Upload the logs from the game")
 uploaded_file = st.file_uploader("Choose a file", type="txt")
 if uploaded_file is not None:
+    st.write("File uploaded successfully")
+    st.session_state.using_default_logs = False
     # Split the logs by empty lines
     logs = uploaded_file.read().decode("utf-8").split("\n\n")
     visualize(logs)
 
 # Read logs 
-if st.button("Or use default logs"):
+st.button("Or use default logs", on_click=use_default_logs)
+if st.session_state.using_default_logs:
+    st.write("Using default logs")
     with open("logs/gamelog.txt", "r") as log_file:
         # Split the logs by empty lines
         logs = log_file.read().split("\n\n")
-    visualize(logs)
+        visualize(logs)
 
 
