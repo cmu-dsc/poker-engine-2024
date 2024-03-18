@@ -7,8 +7,8 @@ from google.cloud import storage
 # PARAMETERS TO CONTROL THE BEHAVIOR OF THE GAME ENGINE
 
 # Player names
-PLAYER_1_NAME = os.getenv("PLAYER_1_NAME", "Player1")
-PLAYER_2_NAME = os.getenv("PLAYER_2_NAME", "Player2")
+PLAYER_1_NAME = os.getenv("PLAYER_1_NAME", "bot1")
+PLAYER_2_NAME = os.getenv("PLAYER_2_NAME", "bot2")
 
 # DNS names for player bots, retrieved from environment variables
 PLAYER_1_DNS = os.getenv("PLAYER_1_DNS", "localhost:50051")
