@@ -23,14 +23,14 @@ jobs:
           service_account: 'artifact-registry@pokerai-417521.iam.gserviceaccount.com'
           access_token_lifetime: 300s
 
-      # - id: cache
-      #   name: Cache Docker layers
-      #   uses: actions/cache@v4
-      #   with:
-      #     path: /tmp/.buildx-cache
-      #     key: ${{ runner.os }}-buildx-${{ hashFiles('python_skeleton/requirements.txt') }}
-      #     restore-keys: |
-      #       ${{ runner.os }}-buildx-
+      - id: cache
+        name: Cache Docker layers
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ hashFiles('python_skeleton/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
 
       - name: Login to Artifact Registry
         uses: docker/login-action@v3
@@ -51,6 +51,6 @@ jobs:
           tags: |
             us-east4-docker.pkg.dev/pokerai-417521/pokerai-registry/${{ github.repository_owner }}:${{ steps.get-tag.outputs.short_ref }}
             us-east4-docker.pkg.dev/pokerai-417521/pokerai-registry/${{ github.repository_owner }}:latest
-          # cache-from: type=local,src=/tmp/.buildx-cache,mode=max
-          # cache-to: type=local,dest=/tmp/.buildx-cache,mode=max
+          cache-from: type=local,src=/tmp/.buildx-cache,mode=max
+          cache-to: type=local,dest=/tmp/.buildx-cache,mode=max
           file: dockerfiles/python_skeleton/Dockerfile
