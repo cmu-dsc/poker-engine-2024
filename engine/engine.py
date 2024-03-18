@@ -43,34 +43,48 @@ class Game:
         self.log: List[str] = [
             f"CMU Poker Bot Game - {PLAYER_1_NAME} vs {PLAYER_2_NAME}"
         ]
-        self.csvlog: List[str] = [['Round', 'Street', 'Team', 'Action', 
-                                   'Team1Cards', 'Team2Cards', 'AllCards']]
+        self.csvlog: List[str] = [
+            [
+                "Round",
+                "Street",
+                "Team",
+                "Action",
+                "ActionAmt",
+                "Team1Cards",
+                "Team2Cards",
+                "AllCards",
+            ]
+        ]
         self.new_actions: List[Deque[Action]] = [deque(), deque()]
 
-    def log_round_state(self, round_state,num):
+    def log_round_state(self, round_state, num):
         """
         Logs the current state of the round.
         """
         temp1 = []
-        temp2= []
+        temp2 = []
 
         if round_state.street == 0 and round_state.button == 0:
             self.log.append(f"{self.players[0].name} posts the blind of {SMALL_BLIND}")
             self.log.append(f"{self.players[1].name} posts the blind of {BIG_BLIND}")
             self.log.append(f"{self.players[0].name} dealt {round_state.hands[0]}")
             self.log.append(f"{self.players[1].name} dealt {round_state.hands[1]}")
-            temp1.append(num)
-            temp1.append(0)
+            temp1.append(num)  # round num
+            temp1.append(round_state.street)
             temp1.append(self.players[0].name)
-            temp1.append(round_state.hands[0])
-            temp1.append('post blind')
+            temp1.append("post blind")
             temp1.append(SMALL_BLIND)
+            temp1.append(round_state.hands[0])
+            temp1.append(round_state.hands[1])
+            temp1.append(round_state.board)
             temp2.append(num)
-            temp2.append(0)
+            temp2.append(round_state.street)
             temp2.append(self.players[1].name)
-            temp2.append(round_state.hands[1])
-            temp2.append('post blind')
+            temp2.append("post blind")
             temp2.append(BIG_BLIND)
+            temp2.append(round_state.hands[0])
+            temp2.append(round_state.hands[1])
+            temp2.append(round_state.board)
             self.csvlog.append(temp1)
             self.csvlog.append(temp2)
 
@@ -80,7 +94,6 @@ class Game:
             # new_csv_entry.append(round_state.hands[0])
             # new_csv_entry.append(round_state.hands[1])
             # new_csv_entry.append([])
-
 
         elif round_state.street > 0 and round_state.button == 1:
             # log the pot every street
@@ -98,38 +111,49 @@ class Game:
             # self.csvlog.append(temp1)
             # self.csvlog.append(temp2)
 
-
-
-
-    def log_action(self, player_name: str, action: Action) -> list:
+    def log_action(
+        self, player_name: str, action: Action, round_state: RoundState
+    ) -> list:
         """
         Logs an action taken by a player.
         """
-        new_csv_entry=[]
+        new_csv_entry = []
         if isinstance(action, FoldAction):
             self.log.append(f"{player_name} folds")
-            new_csv_entry.append(0)
+            new_csv_entry.append(round_state.street)
             new_csv_entry.append(player_name)
-            new_csv_entry.append('fold')
-            new_csv_entry.append(0)
+            new_csv_entry.append("fold")
+            new_csv_entry.append("")
+            new_csv_entry.append(round_state.hands[0])
+            new_csv_entry.append(round_state.hands[1])
+            new_csv_entry.append(round_state.board)
         elif isinstance(action, CallAction):
             self.log.append(f"{player_name} calls")
-            new_csv_entry.append(0)
+            new_csv_entry.append(round_state.street)
             new_csv_entry.append(player_name)
-            new_csv_entry.append('call')
-            new_csv_entry.append(0)
+            new_csv_entry.append("call")
+            new_csv_entry.append("")
+            new_csv_entry.append(round_state.hands[0])
+            new_csv_entry.append(round_state.hands[1])
+            new_csv_entry.append(round_state.board)
         elif isinstance(action, CheckAction):
             self.log.append(f"{player_name} checks")
-            new_csv_entry.append(0)
+            new_csv_entry.append(round_state.street)
             new_csv_entry.append(player_name)
-            new_csv_entry.append('check')
-            new_csv_entry.append(0)
+            new_csv_entry.append("check")
+            new_csv_entry.append("")
+            new_csv_entry.append(round_state.hands[0])
+            new_csv_entry.append(round_state.hands[1])
+            new_csv_entry.append(round_state.board)
         else:  # isinstance(action, RaiseAction)
             self.log.append(f"{player_name} raises to {str(action.amount)}")
-            new_csv_entry.append(0)
+            new_csv_entry.append(round_state.street)
             new_csv_entry.append(player_name)
-            new_csv_entry.append('raise')
-            new_csv_entry.append(f'{str(action.amount)}')
+            new_csv_entry.append("raise")
+            new_csv_entry.append(action.amount)
+            new_csv_entry.append(round_state.hands[0])
+            new_csv_entry.append(round_state.hands[1])
+            new_csv_entry.append(round_state.board)
 
         return new_csv_entry
 
@@ -164,7 +188,7 @@ class Game:
         self.new_actions = [deque(), deque()]
 
         while not isinstance(round_state, TerminalState):
-            self.log_round_state(round_state,num)
+            self.log_round_state(round_state, num)
             # temp1.insert(0, num)
             # temp2.insert(0, num)
             # new_csv_entry.append(temp1)
@@ -176,9 +200,9 @@ class Game:
                 hands[active], round_state.board, self.new_actions[active]
             )
             action = self._validate_action(action, round_state, player.name)
-            temp = self.log_action(player.name, action)
+            temp = self.log_action(player.name, action, round_state)
             temp.insert(0, num)
-        
+
             self.csvlog.append(temp)
             self.new_actions[1 - active].append(action)
             round_state = round_state.proceed(action)
@@ -195,7 +219,6 @@ class Game:
             )
             player.bankroll += delta
         self.log_terminal_state(round_state)
-        
 
     def run_match(self) -> None:
         """
@@ -224,15 +247,13 @@ class Game:
                 )
             self.log.append(f"\nRound #{round_num}")
 
-            self.run_round((round_num == NUM_ROUNDS),round_num)
+            self.run_round((round_num == NUM_ROUNDS), round_num)
             self.players = self.players[::-1]  # Alternate the dealer
 
         self.log.append(f"{self.players[0].name} Bankroll: {self.players[0].bankroll}")
         self.log.append(f"{self.players[1].name} Bankroll: {self.players[1].bankroll}")
 
-
         self._finalize_log()
-
 
     def _finalize_log(self) -> None:
         """
@@ -261,15 +282,14 @@ class Game:
 
         # Placeholder for uploading log, adjust as necessary
         # upload_log_to_s3(log_filename)
-            
-        with open(csvlog_filename, 'w', newline='') as file:
+
+        with open(csvlog_filename, "w", newline="") as file:
             writer = csv.writer(file)
-        # Write the data to the file
+            # Write the data to the file
             for row in self.csvlog:
                 writer.writerow(row)
 
         print(f'CSV file "{csvlog_filename}" has been created and populated with data.')
-        
 
     def _validate_action(
         self, action: Action, round_state: RoundState, player_name: str
@@ -310,4 +330,3 @@ class Game:
 
 if __name__ == "__main__":
     Game().run_match()
-    
