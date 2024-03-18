@@ -1,0 +1,32 @@
+CMU Poker Bot Game - Player1 vs Player2
+
+Round #1
+Player1 posts the blind of 1
+Player2 posts the blind of 2
+Player1 dealt ['1d']
+Player2 dealt ['3s']
+Player1 raises to 400
+Player2 calls
+Flop Board: ['3d'] Pot: 800
+Player2 attempted illegal CallAction
+Player2 checks
+Player1 attempted illegal RaiseAction with amount 398
+Player1 checks
+River Board: ['3d', '2d'] Pot: 800
+Player2 checks
+Player1 attempted illegal RaiseAction with amount 398
+Player1 checks
+Player1 shows ['1d']
+Player2 shows ['3s']
+Player1 awarded 400
+Player2 awarded -400
+
+Round #2
+Player2 posts the blind of 1
+Player1 posts the blind of 2
+Player2 dealt ['6s']
+Player1 dealt ['6d']
+Player2 attempted illegal CheckAction
+Player2 folds
+Player2 awarded -1
+Player1 awarded 1
