@@ -5,7 +5,6 @@ The infrastructure for interacting with the engine.
 from argparse import ArgumentParser
 from concurrent import futures
 import grpc
-from google.protobuf.empty_pb2 import Empty
 import os
 import sys
 from typing import List
@@ -28,12 +27,13 @@ sys.path.append(shared_path)
 
 from pokerbot_pb2 import (  # noqa: E402
     Action as ProtoAction,
-    ActionRequest,
-    ActionResponse,
     ActionType,
-    EndRoundMessage,
     ReadyCheckRequest,
     ReadyCheckResponse,
+    ActionRequest,
+    ActionResponse,
+    EndRoundMessage,
+    EndRoundResponse
 )
 from pokerbot_pb2_grpc import PokerBotServicer, add_PokerBotServicer_to_server  # noqa: E402
 
@@ -113,13 +113,16 @@ class Runner(PokerBotServicer):
 
         return self._convert_action_to_response(action)
 
-    def EndRound(self, request: EndRoundMessage, context: grpc.ServicerContext) -> None:
+    def EndRound(self, request: EndRoundMessage, context: grpc.ServicerContext) -> EndRoundResponse:
         """
         Handles the end of a round.
 
         Args:
             request (EndRoundMessage): The request containing round results.
             context (grpc.ServicerContext): The gRPC context.
+        
+        Returns:
+            EndRoundResponse: The response containing the pokerbot's logs.
         """
         if self.round_flag:
             self._new_round(list(request.player_hand), list(request.board_cards))
@@ -146,7 +149,7 @@ class Runner(PokerBotServicer):
         deltas[1 - self.active] = -request.delta
         self.round_state = TerminalState(deltas, self.round_state.previous_state)
 
-        self.pokerbot.handle_round_over(
+        bot_logs = self.pokerbot.handle_round_over(
             self.game_state, self.round_state, self.active, request.is_match_over
         )
 
@@ -158,7 +161,7 @@ class Runner(PokerBotServicer):
 
         self.round_flag = True
 
-        return Empty()
+        return EndRoundResponse(logs=bot_logs)
 
     def _convert_action_to_response(self, action: Action) -> ActionResponse:
         """

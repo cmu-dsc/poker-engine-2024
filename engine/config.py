@@ -13,11 +13,10 @@ PLAYER_2_DNS = os.getenv("PLAYER_2_DNS", "localhost:50052")
 
 # GAME PROGRESS IS RECORDED HERE
 LOGS_DIRECTORY = "logs"
-GAME_LOG_FILENAME = "gamelog"
+GAME_LOG_FILENAME = "engine_log"
 
 # Check if the logs directory exists, create it if it doesn't
-if not os.path.exists(LOGS_DIRECTORY):
-    os.makedirs(LOGS_DIRECTORY)
+os.makedirs(LOGS_DIRECTORY, exist_ok=True)
 
 # PLAYER_LOG_SIZE_LIMIT IS IN BYTES
 PLAYER_LOG_SIZE_LIMIT = 524288
