@@ -165,23 +165,30 @@ class Game:
         """
         log_filename = os.path.join(LOGS_DIRECTORY, f"{GAME_LOG_FILENAME}.txt")
 
-        print(f"Writing {log_filename}")
         if not upload_logs(self.log, f"{GAME_LOG_FILENAME}.txt"):
+            os.makedirs(LOGS_DIRECTORY, exist_ok=True)
             log_idx = 1
             while os.path.exists(log_filename):
                 log_filename = os.path.join(
                     LOGS_DIRECTORY, f"{GAME_LOG_FILENAME}_{log_idx}.txt"
                 )
                 log_idx += 1
+            print(f"Writing {log_filename}")
             with open(log_filename, "w") as log_file:
                 log_file.write("\n".join(self.log))
 
         for player in self.players:
             player_log_dir = os.path.join(LOGS_DIRECTORY, player.name)
             log_filename = os.path.join(player_log_dir, f"{BOT_LOG_FILENAME}.txt")
-            print(f"Writing {log_filename}")
             if not upload_logs(player.log, f"{player.name}/{BOT_LOG_FILENAME}.txt"):
                 os.makedirs(player_log_dir, exist_ok=True)
+                log_idx = 1
+                while os.path.exists(log_filename):
+                    log_filename = os.path.join(
+                        player_log_dir, f"{BOT_LOG_FILENAME}_{log_idx}.txt"
+                    )
+                    log_idx += 1
+                print(f"Writing {log_filename}")
                 with open(log_filename, "w") as log_file:
                     log_file.write("\n".join(player.log))
 

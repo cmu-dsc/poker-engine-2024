@@ -1,5 +1,7 @@
 import os
 from typing import List
+from google.auth import default
+from google.auth.exceptions import DefaultCredentialsError
 from google.cloud import storage
 
 # PARAMETERS TO CONTROL THE BEHAVIOR OF THE GAME ENGINE
@@ -46,16 +48,33 @@ def upload_logs(log: List[str], log_filename: str) -> bool:
     Args:
         log (List[str]): The list of log messages to upload.
         log_filename (str): The filename to use for the uploaded log file.
+
+    Returns:
+        bool: True if the logs were uploaded successfully, False otherwise.
     """
-    storage_client = storage.Client()
-
     if not BUCKET_NAME:
-        os.makedirs(LOGS_DIRECTORY, exist_ok=True)
         return False
-    bucket = storage_client.bucket(BUCKET_NAME)
-    log_path = f"match_{os.getenv("MATCH_ID", 0)}/{log_filename}"
 
-    blob = bucket.blob(log_path)
+    try:
+        credentials, _ = default()
 
-    blob.upload_from_string("\n".join(log))
-    return True
+        storage_client = storage.Client(credentials=credentials)
+
+        bucket = storage_client.bucket(BUCKET_NAME)
+
+        log_path = f"match_{os.getenv('MATCH_ID', 0)}/{log_filename}"
+
+        blob = bucket.blob(log_path)
+
+        log_content = "\n".join(log)
+        blob.upload_from_string(log_content)
+
+        print(f"Logs uploaded to {BUCKET_NAME}/{log_path}")
+        return True
+
+    except DefaultCredentialsError:
+        print("Authentication credentials not found.")
+        print(
+            "Please set the GOOGLE_APPLICATION_CREDENTIALS environment variable or authenticate using the gcloud CLI."
+        )
+        return False
