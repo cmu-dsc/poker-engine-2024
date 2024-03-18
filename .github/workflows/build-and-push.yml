@@ -39,7 +39,7 @@ jobs:
           username: oauth2accesstoken
           password: ${{ steps.auth.outputs.access_token }}
       
-      - name: Get tag
+      - name: Get tag # not quite sure if this is needed lowkey
         id: get-tag
         run: echo ::set-output name=short_ref::${GITHUB_REF#refs/*/}
 
@@ -51,6 +51,6 @@ jobs:
           tags: |
             us-east4-docker.pkg.dev/pokerai-417521/pokerai-registry/${{ github.repository_owner }}:${{ steps.get-tag.outputs.short_ref }}
             us-east4-docker.pkg.dev/pokerai-417521/pokerai-registry/${{ github.repository_owner }}:latest
-          cache-from: type=local,src=/tmp/.buildx-cache,mode=max
-          cache-to: type=local,dest=/tmp/.buildx-cache,mode=max
+          cache-from: type=local,ref=/tmp/.buildx-cache,mode=max
+          cache-to: type=local,ref=/tmp/.buildx-cache,mode=max
           file: dockerfiles/python_skeleton/Dockerfile
