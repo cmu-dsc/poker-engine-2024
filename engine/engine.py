@@ -26,6 +26,7 @@ from .config import (
     PLAYER_2_NAME,
     SMALL_BLIND,
     STARTING_STACK,
+    upload_logs
 )
 from .evaluate import ShortDeck
 from .client import Client
@@ -172,6 +173,7 @@ class Game:
         print(f"Writing {log_filename}")
         with open(log_filename, "w") as log_file:
             log_file.write("\n".join(self.log))
+        upload_logs(self.log, "engine_log.txt")
             
         for player in self.players:
             log_directory = os.path.join(LOGS_DIRECTORY, player.name)
@@ -181,6 +183,7 @@ class Game:
             print(f"Writing {log_filename}")
             with open(log_filename, "w") as log_file:
                 log_file.write("\n".join(player.log))
+            upload_logs(player.log, f"{player.name}/debug.txt")
 
         # Placeholder
         # upload_log_to_s3(log_filename)

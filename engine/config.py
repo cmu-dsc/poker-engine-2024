@@ -1,5 +1,6 @@
 import os
-import boto3
+from typing import List
+from google.cloud import storage
 
 # PARAMETERS TO CONTROL THE BEHAVIOR OF THE GAME ENGINE
 
@@ -38,16 +39,25 @@ BIG_BLIND = 2
 SMALL_BLIND = 1
 
 
-def upload_log_to_s3(log_filename):
-    """Uploads a log file to S3 if a bucket name is configured."""
-    S3_BUCKET_NAME = os.getenv("S3_BUCKET_NAME")
+def upload_logs(log: List[str], log_filename: str) -> None:
+    """
+    Uploads the logs to a Google Cloud Storage bucket.
 
-    if S3_BUCKET_NAME:
-        s3 = boto3.client("s3")
-        try:
-            s3.upload_file(log_filename, S3_BUCKET_NAME, log_filename)
-            print(f"Uploaded {log_filename} to S3 bucket {S3_BUCKET_NAME}")
-        except boto3.exceptions.S3UploadFailedError as e:
-            print(f"Failed to upload {log_filename} to S3: {e}")
-    else:
-        print("S3_BUCKET_NAME not set. Skipping upload.")
+    Args:
+        log (List[str]): The list of log messages to upload.
+        log_filename (str): The filename to use for the uploaded log file.
+    """
+    storage_client = storage.Client()
+
+    BUCKET_NAME = os.getenv("BUCKET_NAME")
+    if not BUCKET_NAME:
+        return
+    bucket = storage_client.bucket(BUCKET_NAME)
+    log_path = f"match_{os.getenv("MATCH_ID", 0)}/{log_filename}"
+
+    blob = bucket.blob(log_path)
+
+    blob.upload_from_string("\n".join(log))
+
+    print(f"Logs uploaded to {log_path}")
+
