@@ -15,12 +15,10 @@ PLAYER_2_DNS = os.getenv("PLAYER_2_DNS", "localhost:50052")
 # GAME PROGRESS IS RECORDED HERE
 LOGS_DIRECTORY = "logs"
 GAME_LOG_FILENAME = "engine_log"
-
-# Check if the logs directory exists, create it if it doesn't
-os.makedirs(LOGS_DIRECTORY, exist_ok=True)
+BOT_LOG_FILENAME = "debug_log"
 
 # PLAYER_LOG_SIZE_LIMIT IS IN BYTES
-PLAYER_LOG_SIZE_LIMIT = 524288
+PLAYER_LOG_SIZE_LIMIT = 524288  # unused?
 
 # STARTING_GAME_CLOCK AND TIMEOUTS ARE IN SECONDS
 CONNECT_TIMEOUT = 4
@@ -38,8 +36,10 @@ STARTING_STACK = 400
 BIG_BLIND = 2
 SMALL_BLIND = 1
 
+BUCKET_NAME = os.getenv("BUCKET_NAME")
 
-def upload_logs(log: List[str], log_filename: str) -> None:
+
+def upload_logs(log: List[str], log_filename: str) -> bool:
     """
     Uploads the logs to a Google Cloud Storage bucket.
 
@@ -49,15 +49,13 @@ def upload_logs(log: List[str], log_filename: str) -> None:
     """
     storage_client = storage.Client()
 
-    BUCKET_NAME = os.getenv("BUCKET_NAME")
     if not BUCKET_NAME:
-        return
+        os.makedirs(LOGS_DIRECTORY, exist_ok=True)
+        return False
     bucket = storage_client.bucket(BUCKET_NAME)
     log_path = f"match_{os.getenv("MATCH_ID", 0)}/{log_filename}"
 
     blob = bucket.blob(log_path)
 
     blob.upload_from_string("\n".join(log))
-
-    print(f"Logs uploaded to {log_path}")
-
+    return True

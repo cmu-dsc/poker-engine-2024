@@ -17,6 +17,7 @@ from .actions import (
 )
 from .config import (
     BIG_BLIND,
+    BOT_LOG_FILENAME,
     GAME_LOG_FILENAME,
     LOGS_DIRECTORY,
     NUM_ROUNDS,
@@ -26,7 +27,7 @@ from .config import (
     PLAYER_2_NAME,
     SMALL_BLIND,
     STARTING_STACK,
-    upload_logs
+    upload_logs,
 )
 from .evaluate import ShortDeck
 from .client import Client
@@ -163,30 +164,26 @@ class Game:
         Finalizes the game log, writing it to a file and uploading it.
         """
         log_filename = os.path.join(LOGS_DIRECTORY, f"{GAME_LOG_FILENAME}.txt")
-        log_index = 1
-        while os.path.exists(log_filename):
-            log_filename = os.path.join(
-                LOGS_DIRECTORY, f"{GAME_LOG_FILENAME}_{log_index}.txt"
-            )
-            log_index += 1
 
         print(f"Writing {log_filename}")
-        with open(log_filename, "w") as log_file:
-            log_file.write("\n".join(self.log))
-        upload_logs(self.log, "engine_log.txt")
-            
-        for player in self.players:
-            log_directory = os.path.join(LOGS_DIRECTORY, player.name)
-            os.makedirs(log_directory, exist_ok=True)
-            
-            log_filename = os.path.join(log_directory, "debug.txt")
-            print(f"Writing {log_filename}")
+        if not upload_logs(self.log, f"{GAME_LOG_FILENAME}.txt"):
+            log_idx = 1
+            while os.path.exists(log_filename):
+                log_filename = os.path.join(
+                    LOGS_DIRECTORY, f"{GAME_LOG_FILENAME}_{log_idx}.txt"
+                )
+                log_idx += 1
             with open(log_filename, "w") as log_file:
-                log_file.write("\n".join(player.log))
-            upload_logs(player.log, f"{player.name}/debug.txt")
+                log_file.write("\n".join(self.log))
 
-        # Placeholder
-        # upload_log_to_s3(log_filename)
+        for player in self.players:
+            player_log_dir = os.path.join(LOGS_DIRECTORY, player.name)
+            log_filename = os.path.join(player_log_dir, f"{BOT_LOG_FILENAME}.txt")
+            print(f"Writing {log_filename}")
+            if not upload_logs(player.log, f"{player.name}/{BOT_LOG_FILENAME}.txt"):
+                os.makedirs(player_log_dir, exist_ok=True)
+                with open(log_filename, "w") as log_file:
+                    log_file.write("\n".join(player.log))
 
     def _validate_action(
         self, action: Action, round_state: RoundState, player_name: str
