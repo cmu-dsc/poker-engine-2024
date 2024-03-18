@@ -27,3 +27,16 @@ Brew: `brew cask install docker`
 ```bash
 ./scripts/run_docker.sh
 ```
+
+## To visualize
+
+Make sure you have the environment set up as in the previous section.
+
+```bash
+pip install -r ./engine/requirements.txt
+pip install -r ./python_skeleton/requirements.txt
+```
+
+```bash
+streamlit run visualize.py
+```
