@@ -15,8 +15,6 @@ RUN /root/.cargo/bin/uv pip install --no-cache-dir -r requirements.txt
 
 COPY python_skeleton/ ./python_skeleton/
 
-VOLUME /usr/src/app/logs
-
 EXPOSE 50051
 
 CMD ["python", "python_skeleton/prob_bot.py"]
