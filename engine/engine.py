@@ -269,8 +269,8 @@ class Game:
             player_name,
             action,
             action_amt if action_amt else "",
-            round_state.hands[0] if self.round_num % 2 == 0 else round_state.hands[1],
-            round_state.hands[1] if self.round_num % 2 == 0 else round_state.hands[0],
+            round_state.hands[0] if self.round_num % 2 == 1 else round_state.hands[1],
+            round_state.hands[1] if self.round_num % 2 == 1 else round_state.hands[0],
             round_state.board,
             self.original_players[0].bankroll,
         ])
