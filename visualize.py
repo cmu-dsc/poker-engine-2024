@@ -21,7 +21,6 @@ def use_uploaded_logs():
 
 def card_name_to_full_name(card_name):
     number = card_name[0]
-    if number == "1": number = "ace"
     suit = card_name[1]
     suit_to_word = dict(h="hearts", d="diamonds", s="spades", c="clubs")
     return f"{number}_of_{suit_to_word[suit]}"
