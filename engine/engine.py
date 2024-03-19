@@ -56,12 +56,13 @@ class Game:
                 "Team1Cards",
                 "Team2Cards",
                 "AllCards",
+                "Bankroll",
             ]
         ]
         self.new_actions: List[Deque[Action]] = [deque(), deque()]
         self.round_num = 0
 
-    def log_round_state(self, round_state: RoundState, round_num: int):
+    def log_round_state(self, round_state: RoundState):
         """
         Logs the current state of the round.
         """
@@ -72,22 +73,13 @@ class Game:
             self.log.append(f"{self.players[0].name} dealt {round_state.hands[0]}")
             self.log.append(f"{self.players[1].name} dealt {round_state.hands[1]}")
 
-            self.csvlog.append(
-                self._create_csv_row(
-                    round_state, self.players[0].name, "post blind", SMALL_BLIND
-                )
-            )
-            self.csvlog.append(
-                self._create_csv_row(
-                    round_state, self.players[1].name, "post blind", BIG_BLIND
-                )
-            )
+            self._create_csv_row(round_state, self.players[0].name, "posts blind", SMALL_BLIND)
+            self._create_csv_row(round_state, self.players[1].name, "posts blind", BIG_BLIND)
 
         elif round_state.street > 0 and round_state.button == 1:
             # log the pot every street
-            self.log.append(
-                f"{STREET_NAMES[round_state.street]} Board: {round_state.board} Pot: {STARTING_STACK - round_state.stacks[0] + STARTING_STACK - round_state.stacks[1]}"
-            )
+            pot = STARTING_STACK - round_state.stacks[0] + STARTING_STACK - round_state.stacks[1]
+            self.log.append(f"{STREET_NAMES[round_state.street]} Board: {round_state.board} Pot: {pot}")
 
     def log_action(
         self, player_name: str, action: Action, round_state: RoundState
@@ -97,24 +89,16 @@ class Game:
         """
         if isinstance(action, FoldAction):
             self.log.append(f"{player_name} folds")
-            self.csvlog.append(
-                self._create_csv_row(round_state, player_name, "fold", None)
-            )
+            self._create_csv_row(round_state, player_name, "fold", None)
         elif isinstance(action, CallAction):
             self.log.append(f"{player_name} calls")
-            self.csvlog.append(
-                self._create_csv_row(round_state, player_name, "call", None)
-            )
+            self._create_csv_row(round_state, player_name, "call", None)
         elif isinstance(action, CheckAction):
             self.log.append(f"{player_name} checks")
-            self.csvlog.append(
-                self._create_csv_row(round_state, player_name, "check", None)
-            )
+            self._create_csv_row(round_state, player_name, "check", None)
         else:  # isinstance(action, RaiseAction)
             self.log.append(f"{player_name} raises to {str(action.amount)}")
-            self.csvlog.append(
-                self._create_csv_row(round_state, player_name, "raises", action.amount)
-            )
+            self._create_csv_row(round_state, player_name, "raises", action.amount)
 
     def log_terminal_state(self, round_state: TerminalState) -> None:
         """
@@ -129,7 +113,7 @@ class Game:
         self.log.append(f"{self.players[0].name} Bankroll: {self.players[0].bankroll}")
         self.log.append(f"{self.players[1].name} Bankroll: {self.players[1].bankroll}")
 
-    def run_round(self, last_round: bool, num) -> None:
+    def run_round(self, last_round: bool) -> None:
         """
         Runs one round of poker (1 hand).
         """
@@ -143,7 +127,7 @@ class Game:
         self.new_actions = [deque(), deque()]
 
         while not isinstance(round_state, TerminalState):
-            self.log_round_state(round_state, num)
+            self.log_round_state(round_state)
 
             active = round_state.button % 2
             player = self.players[active]
@@ -186,30 +170,22 @@ class Game:
             return
 
         print("Starting match...")
-        original_players = self.players.copy()
+        self.original_players = self.players.copy()
         for self.round_num in range(1, NUM_ROUNDS + 1):
             if self.round_num % 50 == 0:
                 print(f"Starting round {self.round_num}...")
-                print(
-                    f"{self.players[0].name} remaining time: {self.players[0].game_clock}"
-                )
-                print(
-                    f"{self.players[1].name} remaining time: {self.players[1].game_clock}"
-                )
+                print(f"{self.players[0].name} remaining time: {self.players[0].game_clock}")
+                print(f"{self.players[1].name} remaining time: {self.players[1].game_clock}")
             self.log.append(f"\nRound #{self.round_num}")
 
-            self.run_round((self.round_num == NUM_ROUNDS), self.round_num)
+            self.run_round((self.round_num == NUM_ROUNDS))
             self.players = self.players[::-1]  # Alternate the dealer
 
-        self.log.append(
-            f"{original_players[0].name} Bankroll: {original_players[0].bankroll}"
-        )
-        self.log.append(
-            f"{original_players[1].name} Bankroll: {original_players[1].bankroll}"
-        )
+        self.log.append(f"{self.original_players[0].name} Bankroll: {self.original_players[0].bankroll}")
+        self.log.append(f"{self.original_players[1].name} Bankroll: {self.original_players[1].bankroll}")
 
         self._finalize_log()
-        add_match_entry(original_players[0].bankroll, original_players[1].bankroll)
+        add_match_entry(self.original_players[0].bankroll, self.original_players[1].bankroll)
 
     def _finalize_log(self) -> None:
         """
@@ -276,9 +252,7 @@ class Game:
             if RaiseAction in legal_actions and min_raise <= amount <= max_raise:
                 return action
             else:
-                self.log.append(
-                    f"{player_name} attempted illegal RaiseAction with amount {amount}"
-                )
+                self.log.append(f"{player_name} attempted illegal RaiseAction with amount {amount}")
         elif type(action) in legal_actions:
             return action
         else:
@@ -288,17 +262,18 @@ class Game:
 
     def _create_csv_row(
         self, round_state: RoundState, player_name: str, action: str, action_amt: int
-    ) -> List[str]:
-        return [
+    ) -> None:
+        self.csvlog.append([
             self.round_num,
             round_state.street,
             player_name,
             action,
             action_amt if action_amt else "",
-            round_state.hands[0],
-            round_state.hands[1],
+            round_state.hands[0] if self.round_num % 2 == 0 else round_state.hands[1],
+            round_state.hands[1] if self.round_num % 2 == 0 else round_state.hands[0],
             round_state.board,
-        ]
+            self.original_players[0].bankroll,
+        ])
 
 
 if __name__ == "__main__":
