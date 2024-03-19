@@ -121,7 +121,7 @@ class Game:
         stacks = [STARTING_STACK - SMALL_BLIND, STARTING_STACK - BIG_BLIND]
         deck = ShortDeck()
         deck.shuffle()
-        hands = [deck.deal(1), deck.deal(1)]
+        hands = [deck.deal(2), deck.deal(2)]
 
         round_state = RoundState(0, 0, pips, stacks, hands, [], deck, None)
         self.new_actions = [deque(), deque()]
