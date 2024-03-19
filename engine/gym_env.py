@@ -46,11 +46,9 @@ class PokerEnv(gym.Env):
 
         # Action space is a Box with 4 dimensions, each representing an action
         # 0: Fold, 1: Call, 2: Check, 3: Raise
-        # Two players, so the action space is a Tuple of two single_action_spaces
         which_action_space = spaces.Discrete(4)
         raise_amount_space = spaces.Box(low=0, high=400, shape=(), dtype=int)
-        single_action_space = spaces.Tuple([which_action_space, raise_amount_space])
-        self.action_space = spaces.Tuple([single_action_space, single_action_space])
+        self.action_space = spaces.Tuple([which_action_space, raise_amount_space])
 
         # Observation space is a Dict. 
         # Since we have two players, is_my_turn is a Discrete(2)
@@ -80,18 +78,11 @@ class PokerEnv(gym.Env):
         self.player_last_actions = [None, None]
         self.reset()
 
-    def _get_observation(self, player_num: int):
+    def _get_observation(self, player_num: int, enemy_shown_card="XX"):
         """
         Returns the observation for the player_num player.
         """ 
         round_state = self.curr_round_state
-
-        enemy_shown_card = "XX"
-        if isinstance(round_state, TerminalState):
-            round_state = round_state.previous_state
-            if self.player_last_actions[player_num] != FoldAction:
-                enemy_shown_card = round_state.hands[1 - player_num]
-
         legal_actions = round_state.legal_actions()
         my_pip = round_state.pips[player_num]
         opponent_pip = round_state.pips[1 - player_num]
@@ -127,15 +118,19 @@ class PokerEnv(gym.Env):
         was_last_round = self.curr_round_num == self.num_rounds
         self._reset_round()
         self.curr_round_num += 1
-        return (self._get_observation(0), self._get_observation(1)), tuple(round_state.deltas), was_last_round, False, None
+
+        enemy_shown_cards = []
+        for player_num in range(2):
+            if self.player_last_actions[player_num] != FoldAction:
+                enemy_shown_cards.append(round_state.previous_state.hands[1 - player_num])
+
+        return (self._get_observation(0, enemy_shown_cards[0]), self._get_observation(1, enemy_shown_cards[1])), tuple(round_state.deltas), was_last_round, False, None
 
     def step(self, action):
         """
         Takes a step in the game, given the action taken by the active player.
         """
-        player1_action, player2_action = action
         active = self.curr_round_state.button % 2
-        action = player1_action if active == 0 else player2_action
         action_type, amount = action
         if action_type == 3:
             action = RaiseAction(amount)
@@ -180,7 +175,7 @@ class PokerEnv(gym.Env):
         """
         Resets the entire game.
         """
-        self.bankrolls = [STARTING_STACK, STARTING_STACK]
+        self.bankrolls = [0, 0]
         obs = self._reset_round()
         return obs
 
