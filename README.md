@@ -26,7 +26,19 @@ Brew: `brew cask install docker`
 
 ## To visualize
 
-Make sure you have installed dependencies as above.
+### Use the deployed app
+
+https://cmu-poker-ai-2024.streamlit.app/
+
+
+### Run locally
+
+Make sure you have the environment set up as in the previous section.
+
+```bash
+pip install -r ./engine/requirements.txt
+pip install -r ./python_skeleton/requirements.txt
+```
 
 ```bash
 pip install streamlit

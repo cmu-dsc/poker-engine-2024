@@ -6,8 +6,18 @@ from PIL import Image, ImageDraw, ImageFont
 def renew_action_num():
     st.session_state.action_num = 0
 
+
 def use_default_logs():
-    st.session_state.using_default_logs = True
+    st.session_state.use_default_logs = True
+    with open("logs/gamelog.txt", "r") as log_file:
+        # Split the logs by empty lines
+        log = log_file.read().split("\n\n")
+    st.session_state.uploaded_log = log
+
+
+def use_uploaded_logs():
+    st.session_state.use_default_logs = False
+    
 
 def card_name_to_full_name(card_name):
     number = card_name[0]
@@ -117,7 +127,7 @@ def get_poker_table(round_log, action_num):
 
 def visualize(logs):
     # Choose a round to display
-    round_num = st.slider("Choose a round", 1, len(logs), 1, on_change=renew_action_num)
+    round_num = st.slider("Choose a round", 1, len(logs)-1, 1, on_change=renew_action_num)
 
     # Expander for the logs
     with st.expander("Round Logs"):
@@ -140,26 +150,32 @@ def visualize(logs):
 
 st.title('Poker AI visualizer')
 
-if "using_default_logs" not in st.session_state:
-    st.session_state.using_default_logs = False
+# Initialize session states
+if "uploaded_log" not in st.session_state:
+    st.session_state.uploaded_log = None
+if "use_default_logs" not in st.session_state:
+    st.session_state.use_default_logs = False
 
 # Upload logs
 st.write("Upload the logs from the game")
-uploaded_file = st.file_uploader("Choose a file", type="txt")
-if uploaded_file is not None:
+uploaded_log = st.file_uploader("Choose a file", type="txt", on_change=use_uploaded_logs)
+if uploaded_log is not None and not st.session_state.use_default_logs:
     st.write("File uploaded successfully")
-    st.session_state.using_default_logs = False
-    # Split the logs by empty lines
-    logs = uploaded_file.read().decode("utf-8").split("\n\n")
-    visualize(logs)
+    st.session_state.uploaded_log = uploaded_log.read().decode("utf-8").split("\n\n")
 
-# Read logs 
-st.button("Or use default logs", on_click=use_default_logs)
-if st.session_state.using_default_logs:
+# Use default logs
+col1, col2 = st.columns([0.3, 1])
+with col1:
+    st.button("Use default logs", on_click=use_default_logs)
+with col2:
+    st.button("Use uploaded logs", on_click=use_uploaded_logs)
+
+# Visualize logs
+if st.session_state.use_default_logs:
     st.write("Using default logs")
-    with open("logs/gamelog.txt", "r") as log_file:
-        # Split the logs by empty lines
-        logs = log_file.read().split("\n\n")
-        visualize(logs)
+    visualize(st.session_state.uploaded_log)
+elif st.session_state.uploaded_log is not None:
+    visualize(st.session_state.uploaded_log)
+
 
 

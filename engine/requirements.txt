@@ -13,7 +13,7 @@ grpcio==1.62.1
 grpcio-status==1.62.1
 grpcio-tools==1.62.1
 idna==3.6
-packaging==24.0
+packaging==23.2
 protobuf==4.25.3
 pyasn1==0.5.1
 pyasn1-modules==0.3.0
@@ -23,3 +23,6 @@ rsa==4.9
 setuptools==69.2.0
 six==1.16.0
 urllib3==2.2.1
+streamlit==1.32.2
+pillow==10.2.0
+gymnasium==0.29.0
