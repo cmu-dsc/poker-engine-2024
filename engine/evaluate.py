@@ -20,122 +20,87 @@ TOTAL: 17550 combos
 """
 
 from random import shuffle
-from typing import List
-from itertools import combinations
+from typing import List, Tuple
+
+RANKS = "123456789"
+SUITS = "shd"
 
 
 class ShortDeck:
     """Custom deck for the poker variant with cards ranked 1 to 6 across 3 suits."""
 
     def __init__(self):
-        self.cards = [f"{rank}{suit}" for rank in "123456789" for suit in "shd"]
+        self.cards = {f"{rank}{suit}" for rank in RANKS for suit in SUITS}
 
     def shuffle(self):
         """Shuffles the deck."""
+        self.cards = list(self.cards)
         shuffle(self.cards)
+        self.cards = set(self.cards)
 
     def deal(self, n):
         """Deals n cards from the deck."""
-        return [self.cards.pop() for _ in range(n)]
+        dealt_cards = set(self.cards.pop() for _ in range(n))
+        self.cards -= dealt_cards
+        return dealt_cards
 
 
-def is_straight_flush(hand: List[str]) -> bool:
-    return num_flushes(hand) == 4 and num_straights(hand) == 2
+def is_straight_flush(ranks: Tuple[int], suits: Tuple[str]) -> bool:
+    return len(set(suits)) == 1 and is_straight(ranks)
 
 
-def is_trips(hand: List[str]) -> bool:
-    return num_pairs(hand) == 3
+def is_trips(ranks: Tuple[int]) -> bool:
+    return len(set(ranks)) == 2 and any(ranks.count(r) == 3 for r in ranks)
 
 
-def is_two_pair(hand: List[str]) -> bool:
-    return num_pairs(hand) == 2
+def is_two_pair(ranks: Tuple[int]) -> bool:
+    return len(set(ranks)) == 3 and all(ranks.count(r) >= 2 for r in set(ranks))
 
 
-def is_4flush(hand: List[str]) -> bool:
-    return num_flushes(hand) == 4
+def is_4flush(suits: Tuple[str]) -> bool:
+    return len(set(suits)) == 2
 
 
-def is_straight(hand: List[str]) -> bool:
-    return num_straights(hand) > 0
+def is_straight(ranks: Tuple[int]) -> bool:
+    return len(set(ranks)) == 4 and max(ranks) - min(ranks) == 3
 
 
-def is_3flush(hand: List[str]) -> bool:
-    return num_flushes(hand) == 1
+def is_3flush(suits: Tuple[str]) -> bool:
+    return len(set(suits)) == 2
 
 
-def is_pair(hand: List[str]) -> bool:
-    return num_pairs(hand) == 1
+def is_pair(ranks: Tuple[int]) -> bool:
+    return len(set(ranks)) == 3
 
 
-def num_flushes(hand: List[str]) -> int:
-    ans = 0
-    for combo in combinations(hand, 3):
-        if combo[0][1] == combo[1][1] and combo[1][1] == combo[2][1]:
-            ans += 1
-    return ans
+def high_card_value(ranks: Tuple[int]) -> int:
+    return sum(rank * (10**i) for i, rank in enumerate(sorted(ranks, reverse=True)))
 
 
-def num_straights(hand: List[str]) -> int:
-    ans = 0
-    ranks = sorted(int(card[0]) for card in hand)
-    for combo in combinations(ranks, 3):
-        if combo[0] == combo[1] - 1 and combo[1] == combo[2] - 1:
-            ans += 1
-    return ans
-
-
-def num_pairs(hand: List[str]) -> int:
-    ans = 0
-    for combo in combinations(hand, 2):
-        if combo[0][0] == combo[1][0]:
-            ans += 1
-    return ans
-
-
-def high_card_value(hand: List[str]) -> int:
-    return sum(int(card[0]) * (10**i) for i, card in enumerate(sorted(hand)))
-
-
-def frequent_card_value(hand: List[str]) -> int:
-    ranks = [int(card[0]) for card in hand]
+def frequent_card_value(ranks: Tuple[int]) -> int:
     counts = {x: ranks.count(x) for x in ranks}
-    ranks.sort(key=lambda x: 10 * counts[x] + x)
-    return sum(rank * (10**i) for i, rank in enumerate(ranks))
-
-
-def find_flush(hand: List[str]) -> List[str]:
-    if hand[0][1] == hand[1][1] or hand[0][1] == hand[2][1]:
-        suit = hand[0][1]
-    else:
-        suit = hand[1][1]
-
-    return list(filter(lambda x: x[1] == suit, hand))
-
-
-def find_straight(hand: List[str]) -> List[str]:
-    s1 = list(sorted(hand))[1:4]
-    s2 = list(sorted(hand))[0:3]
-    if num_straights(s1) > 0:
-        return s1
-    else:
-        return s2
+    sorted_ranks = sorted(ranks, key=lambda x: (counts[x], x), reverse=True)
+    return sum(rank * (10**i) for i, rank in enumerate(sorted_ranks))
 
 
 def evaluate(hand: List[str], board: List[str]) -> int:
-    combined_hand = sorted(hand + board, key=lambda x: int(x[0]), reverse=True)
-    if is_straight_flush(combined_hand):
-        return 8000 + high_card_value(combined_hand)
-    elif is_trips(combined_hand):
-        return 7000 + frequent_card_value(combined_hand)
-    elif is_two_pair(combined_hand):
-        return 6000 + high_card_value(combined_hand)
-    elif is_4flush(combined_hand):
-        return 4000 + high_card_value(combined_hand)
-    elif is_straight(combined_hand):
-        return 3000 + high_card_value(find_straight(combined_hand))
-    elif is_3flush(combined_hand):
-        return 3000 + high_card_value(find_flush(combined_hand))
-    elif is_pair(combined_hand):
-        return 2000 + frequent_card_value(combined_hand)
+    combined_cards = sorted(hand + board, key=lambda x: RANKS.index(x[0]), reverse=True)
+    ranks = tuple(RANKS.index(card[0]) for card in combined_cards)
+    suits = tuple(card[1] for card in combined_cards)
+
+    if is_straight_flush(ranks, suits):
+        return 8000 + high_card_value(ranks)
+    elif is_trips(ranks):
+        return 7000 + frequent_card_value(ranks)
+    elif is_two_pair(ranks):
+        return 6000 + high_card_value(ranks)
+    elif is_4flush(suits):
+        return 4000 + high_card_value(ranks)
+    elif is_straight(ranks):
+        return 3000 + high_card_value(ranks)
+    elif is_3flush(suits):
+        return 3000 + high_card_value(ranks)
+    elif is_pair(ranks):
+        return 2000 + frequent_card_value(ranks)
     else:
-        return 1000 + high_card_value(combined_hand)
+        return 1000 + high_card_value(ranks)
