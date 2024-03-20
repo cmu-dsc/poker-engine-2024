@@ -70,6 +70,7 @@ class PokerEnv(gym.Env):
             "min_raise": spaces.Box(low=0, high=400, shape=(), dtype=int),
             "max_raise": spaces.Box(low=0, high=400, shape=(), dtype=int),
             "enemy_shown_card": card_space,
+            "round_num": spaces.Discrete(NUM_ROUNDS),
         })
         self.observation_space = spaces.Tuple([observation_space, observation_space])
 
@@ -106,6 +107,7 @@ class PokerEnv(gym.Env):
             "min_raise": min_raise,
             "max_raise": max_raise,
             "enemy_shown_card": enemy_shown_card,
+            "round_num": self.curr_round_num,
         }
 
     def _end_round(self, round_state: TerminalState):
