@@ -141,10 +141,11 @@ def evaluate(hand: List[str], board: List[str]) -> int:
         return 1000 + high_card_value(combined_hand)
 
 
-@cache
-def evaluate_with_cache(cards: str) -> int:
+def evaluate_with_str(cards: str) -> int:
     combined_hand = cards.split('_')
+    combined_hand = sorted(combined_hand, key=lambda x: int(x[0]), reverse=True)
     assert len(combined_hand) == 4
+
     if is_straight_flush(combined_hand):
         return 8000 + high_card_value(combined_hand)
     elif is_trips(combined_hand):
@@ -161,3 +162,14 @@ def evaluate_with_cache(cards: str) -> int:
         return 2000 + frequent_card_value(combined_hand)
     else:
         return 1000 + high_card_value(combined_hand)
+    
+# import itertools
+# import pickle
+
+# cards = [f"{rank}{suit}" for rank in "123456789" for suit in "shd"]
+# possible_card_comb = list(itertools.combinations(cards, 4))
+# results = dict()
+# for c in possible_card_comb:
+#     c = sorted(c)
+#     results['_'.join(c)] = evaluate_with_str('_'.join(c))
+# pickle.dump(results, open("results.pkl", "wb"))
