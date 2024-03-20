@@ -10,7 +10,7 @@ from skeleton.states import GameState, TerminalState, RoundState
 from skeleton.states import NUM_ROUNDS, STARTING_STACK, BIG_BLIND, SMALL_BLIND
 from skeleton.bot import Bot
 from skeleton.runner import parse_args, run_bot
-from skeleton.evaluate import evaluate
+from skeleton.evaluate import evaluate_with_cache
 
 class Player(Bot):
     """
@@ -106,13 +106,14 @@ class Player(Bot):
         self.log.append("My contribution: " + str(my_contribution))
         self.log.append("My bankroll: " + str(my_bankroll))
 
-        leftover_cards = [f"{rank}{suit}" for rank in "234567" for suit in "shd" if f"{rank}{suit}" not in my_cards + board_cards]
-        possible_card_comb = list(itertools.permutations(leftover_cards, 3 - len(board_cards)))
+        leftover_cards = [f"{rank}{suit}" for rank in "123456789" for suit in "shd" if f"{rank}{suit}" not in my_cards + board_cards]
+        possible_card_comb = list(itertools.permutations(leftover_cards, 4 - len(board_cards)))
         possible_card_comb = [board_cards + list(c) for c in possible_card_comb]
 
-        result = map(lambda x: evaluate([x[0], x[1]], my_cards) > evaluate([x[0], x[1]], [x[2]]), possible_card_comb)
+        result = map(lambda x: evaluate_with_cache('_'.join(my_cards+x[:2])) > evaluate_with_cache('_'.join(x)), possible_card_comb)
         prob = sum(result) / len(possible_card_comb)
         expected_gain = prob * max(my_contribution, opp_contribution) - (1 - prob) * max(my_contribution, opp_contribution)
+
         self.log.append(f"Winning probability: {prob}")
         self.log.append(f"Expected gain: {expected_gain}")
 

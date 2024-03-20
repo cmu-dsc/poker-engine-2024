@@ -22,7 +22,7 @@ TOTAL: 17550 combos
 from random import shuffle
 from typing import List
 from itertools import combinations
-
+from functools import cache
 
 class ShortDeck:
     """Custom deck for the poker variant with cards ranked 1 to 6 across 3 suits."""
@@ -123,6 +123,28 @@ def find_straight(hand: List[str]) -> List[str]:
 
 def evaluate(hand: List[str], board: List[str]) -> int:
     combined_hand = sorted(hand + board, key=lambda x: int(x[0]), reverse=True)
+    if is_straight_flush(combined_hand):
+        return 8000 + high_card_value(combined_hand)
+    elif is_trips(combined_hand):
+        return 7000 + frequent_card_value(combined_hand)
+    elif is_two_pair(combined_hand):
+        return 6000 + high_card_value(combined_hand)
+    elif is_4flush(combined_hand):
+        return 4000 + high_card_value(combined_hand)
+    elif is_straight(combined_hand):
+        return 3000 + high_card_value(find_straight(combined_hand))
+    elif is_3flush(combined_hand):
+        return 3000 + high_card_value(find_flush(combined_hand))
+    elif is_pair(combined_hand):
+        return 2000 + frequent_card_value(combined_hand)
+    else:
+        return 1000 + high_card_value(combined_hand)
+
+
+@cache
+def evaluate_with_cache(cards: str) -> int:
+    combined_hand = cards.split('_')
+    assert len(combined_hand) == 4
     if is_straight_flush(combined_hand):
         return 8000 + high_card_value(combined_hand)
     elif is_trips(combined_hand):

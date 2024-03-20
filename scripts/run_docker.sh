@@ -1,5 +1,6 @@
 #!/bin/bash
 
-docker-compose down
-docker-compose build
-docker-compose up
+# sudo rm -rf logs
+docker compose down
+docker compose build
+docker compose up
