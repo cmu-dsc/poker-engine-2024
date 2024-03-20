@@ -4,8 +4,6 @@ CMU Poker Bot Competition Game Engine 2024
 import gymnasium as gym
 from gymnasium import spaces
 from collections import deque
-import os
-from typing import Deque, List, SupportsFloat
 
 from .actions import (
     STREET_NAMES,
@@ -18,18 +16,9 @@ from .actions import (
 )
 from .config import (
     BIG_BLIND,
-    BOT_LOG_FILENAME,
-    GAME_LOG_FILENAME,
-    LOGS_DIRECTORY,
     NUM_ROUNDS,
-    PLAYER_1_DNS,
-    PLAYER_1_NAME,
-    PLAYER_2_DNS,
-    PLAYER_2_NAME,
     SMALL_BLIND,
     STARTING_STACK,
-    upload_logs,
-    add_match_entry,
 )
 from .evaluate import ShortDeck
 from .client import Client
