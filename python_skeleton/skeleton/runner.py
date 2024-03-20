@@ -106,9 +106,21 @@ class Runner(PokerBotServicer):
             action = self._convert_proto_action(proto_action)
             self.round_state = self.round_state.proceed(action)
 
-        action = self.pokerbot.get_action(
-            self.game_state, self.round_state, self.round_state.button % 2
-        )
+        active = self.round_state.button % 2
+        observation = {
+            "legal_actions": self.round_state.legal_actions(),
+            "street": self.round_state.street,
+            "my_cards": self.round_state.hands[0],
+            "board_cards": tuple(self.round_state.board),
+            "my_pip": self.round_state.pips[active],
+            "opp_pip": self.round_state.pips[1 - active],
+            "my_stack": self.round_state.stacks[active],
+            "opp_stack": self.round_state.stacks[1 - active],
+            "my_bankroll": self.game_state.bankroll,
+            "min_raise": self.round_state.raise_bounds()[0],
+            "max_raise": self.round_state.raise_bounds()[1],
+        }
+        action = self.pokerbot.get_action(observation)
         self.round_state = self.round_state.proceed(action)
 
         return self._convert_action_to_response(action)

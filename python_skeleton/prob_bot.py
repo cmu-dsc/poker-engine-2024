@@ -76,37 +76,39 @@ class Player(Bot):
 
         return self.log
 
-    def get_action(self, game_state: GameState, round_state: RoundState, active: int) -> Action:
+    def get_action(self, observation: dict) -> Action:
         """
         Where the magic happens - your code should implement this function.
         Called any time the engine needs an action from your bot.
 
         Args:
-            game_state (GameState): The state of the game.
-            round_state (RoundState): The state of the round.
-            active (int): Your player's index.
+            observation (dict): The observation of the current state.
+            {
+                "legal_actions": List of the Actions that are legal to take.
+                "street": 0, 1, or 2 representing pre-flop, flop, or river respectively
+                "my_cards": List[str] of your cards, e.g. ["1s", "2h"]
+                "board_cards": List[str] of the cards on the board
+                "my_pip": int, the number of chips you have contributed to the pot this round of betting
+                "opp_pip": int, the number of chips your opponent has contributed to the pot this round of betting
+                "my_stack": int, the number of chips you have remaining
+                "opp_stack": int, the number of chips your opponent has remaining
+                "my_bankroll": int, the number of chips you have won or lost from the beginning of the game to the start of this round
+                "min_raise": int, the smallest number of chips for a legal bet/raise
+                "max_raise": int, the largest number of chips for a legal bet/raise
+            }
 
         Returns:
             Action: The action you want to take.
         """
-        legal_actions = round_state.legal_actions() # the actions you are allowed to take
-        street = round_state.street # 0, 1, or 2 representing pre-flop, flop, or river respectively
-        my_cards = round_state.hands[0] # your cards
-        board_cards = round_state.board # the board cards
-        my_pip = round_state.pips[active] # the number of chips you have contributed to the pot this round of betting
-        opp_pip = round_state.pips[1 - active] # the number of chips your opponent has contributed to the pot this round of betting
-        my_stack = round_state.stacks[active] # the number of chips you have remaining
-        opp_stack = round_state.stacks[1 - active] # the number of chips your opponent has remaining
-        continue_cost = opp_pip - my_pip # the number of chips needed to stay in the pot
-        my_contribution = STARTING_STACK - my_stack # the number of chips you have contributed to the pot
-        opp_contribution = STARTING_STACK - opp_stack # the number of chips your opponent has contributed to the pot
-        my_bankroll = game_state.bankroll
+        my_contribution = STARTING_STACK - observation["my_stack"] # the number of chips you have contributed to the pot
+        opp_contribution = STARTING_STACK - observation["opp_stack"] # the number of chips your opponent has contributed to the pot
+        continue_cost = observation["opp_pip"] - observation["my_pip"] # the number of chips needed to stay in the pot
 
-        self.log.append("My cards: " + str(my_cards))
-        self.log.append("Board cards: " + str(board_cards))
-        self.log.append("My stack: " + str(my_stack))
+        self.log.append("My cards: " + str(observation["my_cards"]))
+        self.log.append("Board cards: " + str(observation["board_cards"]))
+        self.log.append("My stack: " + str(observation["my_stack"]))
         self.log.append("My contribution: " + str(my_contribution))
-        self.log.append("My bankroll: " + str(my_bankroll))
+        self.log.append("My bankroll: " + str(observation["my_bankroll"]))
 
         # Original probability calculation
         # leftover_cards = [f"{rank}{suit}" for rank in "123456789" for suit in "shd" if f"{rank}{suit}" not in my_cards + board_cards]
@@ -116,7 +118,7 @@ class Player(Bot):
         # prob = sum(result) / len(possible_card_comb)
 
         # Use pre-computed probability calculation
-        prob = self.pre_computed_probs['_'.join(sorted(my_cards)) + '_' + '_'.join(sorted(board_cards))]
+        prob = self.pre_computed_probs['_'.join(sorted(observation["my_cards"])) + '_' + '_'.join(sorted(observation["board_cards"]))]
 
         expected_gain = prob * max(my_contribution, opp_contribution) - (1 - prob) * max(my_contribution, opp_contribution)
 
@@ -127,15 +129,14 @@ class Player(Bot):
             prob = prob * 0.8
             self.log.append(f"Adjusted Winning probability: {prob}")
 
-        if prob > 0.7 and RaiseAction in legal_actions:
-            min_raise, max_raise = round_state.raise_bounds() # the smallest and largest numbers of chips for a legal bet/raise
-            min_cost = min_raise - my_pip # the cost of a minimum bet/raise
-            max_cost = max_raise - my_pip # the cost of a maximum bet/raise
-            raise_amount = min(int(min_raise*1.5), max_raise)
+        if prob > 0.7 and RaiseAction in observation["legal_actions"]:
+            min_cost = observation["min_raise"] - observation["my_pip"] # the cost of a minimum bet/raise
+            max_cost = observation["max_raise"] - observation["my_pip"] # the cost of a maximum bet/raise
+            raise_amount = min(int(observation["min_raise"]*1.5), observation["max_raise"])
             action = RaiseAction(raise_amount)
-        elif prob < 0.4 and continue_cost > 1 and FoldAction in legal_actions:
+        elif prob < 0.4 and continue_cost > 1 and FoldAction in observation["legal_actions"]:
             action = FoldAction()
-        elif CheckAction in legal_actions:
+        elif CheckAction in observation["legal_actions"]:
             action = CheckAction()
         else:
             action = CallAction()

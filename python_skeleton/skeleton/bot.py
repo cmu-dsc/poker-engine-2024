@@ -46,26 +46,36 @@ class Bot:
         raise NotImplementedError("handle_round_over")
 
     def get_action(
-        self, game_state: GameState, round_state: RoundState, active: int
+        self, observation: dict
     ) -> Action:
         """
         Where the magic happens - your code should implement this function.
         Called any time the engine needs an action from your bot.
 
-        Arguments:
-        game_state: the GameState object.
-        round_state: the RoundState object.
-        active: your player's index.
+        Args:
+            observation (dict): The observation of the current state.
+            {
+                "legal_actions": List of the Actions that are legal to take.
+                "street": 0, 1, or 2 representing pre-flop, flop, or river respectively
+                "my_cards": List[str] of your cards, e.g. ["1s", "2h"]
+                "board_cards": List[str] of the cards on the board
+                "my_pip": int, the number of chips you have contributed to the pot this round of betting
+                "opp_pip": int, the number of chips your opponent has contributed to the pot this round of betting
+                "my_stack": int, the number of chips you have remaining
+                "opp_stack": int, the number of chips your opponent has remaining
+                "my_bankroll": int, the number of chips you have won or lost from the beginning of the game to the start of this round
+                "min_raise": int, the smallest number of chips for a legal bet/raise
+                "max_raise": int, the largest number of chips for a legal bet/raise
+            }
 
         Returns:
-        Your action.
+            Action: The action you want to take.
         """
         # raise NotImplementedError('get_action')
         # Example simple strategy:
-        legal_actions = round_state.legal_actions()
-        if CallAction in legal_actions:
+        if CallAction in observation["legal_actions"]:
             return CallAction()
-        elif CheckAction in legal_actions:
+        elif CheckAction in observation["legal_actions"]:
             return CheckAction()
         else:
             return FoldAction()
