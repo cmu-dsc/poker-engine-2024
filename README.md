@@ -47,13 +47,11 @@ streamlit run visualize.py
 
 ## Gym env
 
-Refer to test_gym_env.py for more details.
+Refer to ```test_gym_env.py``` and ```engine/gym_env.py``` for more details.
 
 
 ```python
 from engine.gym_env import PokerEnv 
-
-num_to_action = {0: "Fold", 1: "Call", 2: "Check", 3: "Raise"}
 
 env = PokerEnv(num_rounds=1000)
 (obs1, obs2) = env.reset()
