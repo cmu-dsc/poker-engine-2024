@@ -124,18 +124,18 @@ def find_straight(hand: List[str]) -> List[str]:
 def evaluate(hand: List[str], board: List[str]) -> int:
     combined_hand = sorted(hand + board, key=lambda x: int(x[0]), reverse=True)
     if is_straight_flush(combined_hand):
-        return 8000 + high_card_value(combined_hand)
+        return 80000 + high_card_value(combined_hand)
     elif is_trips(combined_hand):
-        return 7000 + frequent_card_value(combined_hand)
+        return 70000 + frequent_card_value(combined_hand)
     elif is_two_pair(combined_hand):
-        return 6000 + high_card_value(combined_hand)
+        return 60000 + high_card_value(combined_hand)
     elif is_4flush(combined_hand):
-        return 5000 + high_card_value(combined_hand)
+        return 50000 + high_card_value(combined_hand)
     elif is_straight(combined_hand):
-        return 4000 + high_card_value(find_straight(combined_hand))
+        return 40000 + high_card_value(find_straight(combined_hand))
     elif is_3flush(combined_hand):
-        return 3000 + high_card_value(find_flush(combined_hand))
+        return 30000 + high_card_value(find_flush(combined_hand))
     elif is_pair(combined_hand):
-        return 2000 + frequent_card_value(combined_hand)
+        return 20000 + frequent_card_value(combined_hand)
     else:
-        return 1000 + high_card_value(combined_hand)
+        return 10000 + high_card_value(combined_hand)
