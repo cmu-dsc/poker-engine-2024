@@ -124,21 +124,21 @@ def find_straight(hand: List[str]) -> List[str]:
 def evaluate(hand: List[str], board: List[str]) -> int:
     combined_hand = sorted(hand + board, key=lambda x: int(x[0]), reverse=True)
     if is_straight_flush(combined_hand):
-        return 8000 + high_card_value(combined_hand)
+        return 80000 + high_card_value(combined_hand)
     elif is_trips(combined_hand):
-        return 7000 + frequent_card_value(combined_hand)
+        return 70000 + frequent_card_value(combined_hand)
     elif is_two_pair(combined_hand):
-        return 6000 + high_card_value(combined_hand)
+        return 60000 + high_card_value(combined_hand)
     elif is_4flush(combined_hand):
-        return 4000 + high_card_value(combined_hand)
+        return 50000 + high_card_value(combined_hand)
     elif is_straight(combined_hand):
-        return 3000 + high_card_value(find_straight(combined_hand))
+        return 40000 + high_card_value(find_straight(combined_hand))
     elif is_3flush(combined_hand):
-        return 3000 + high_card_value(find_flush(combined_hand))
+        return 30000 + high_card_value(find_flush(combined_hand))
     elif is_pair(combined_hand):
-        return 2000 + frequent_card_value(combined_hand)
+        return 20000 + frequent_card_value(combined_hand)
     else:
-        return 1000 + high_card_value(combined_hand)
+        return 10000 + high_card_value(combined_hand)
 
 
 def evaluate_with_str(cards: str) -> int:
@@ -173,25 +173,25 @@ import pickle
 # for c in possible_card_comb:
 #     c = sorted(c)
 #     results['_'.join(c)] = evaluate_with_str('_'.join(c))
-# pickle.dump(results, open("results.pkl", "wb"))
+# pickle.dump(results, open("pre_computed_evals.pkl", "wb"))
 
-# pre_computed_evals = pickle.load(open("pre_computed_evals.pkl", "rb"))
-# cards = [f"{rank}{suit}" for rank in "123456789" for suit in "shd"]
-# possible_my_cards = list(itertools.combinations(cards, 2))
-# results = dict()
+pre_computed_evals = pickle.load(open("pre_computed_evals.pkl", "rb"))
+cards = [f"{rank}{suit}" for rank in "123456789" for suit in "shd"]
+possible_my_cards = list(itertools.combinations(cards, 2))
+results = dict()
 
-# for i in range(3):
-#     for my_cards in possible_my_cards:
-#         my_cards = list(my_cards)
-#         possible_board_cards = list(itertools.combinations([c for c in cards if c not in my_cards], i))
-#         for board_cards in possible_board_cards:
-#             board_cards = list(board_cards)
-#             leftover_cards = [f"{rank}{suit}" for rank in "123456789" for suit in "shd" if f"{rank}{suit}" not in my_cards + board_cards]
-#             possible_card_comb = list(itertools.permutations(leftover_cards, 4 - len(board_cards)))
-#             possible_card_comb = [board_cards + list(c) for c in possible_card_comb]
-#             result = map(lambda x: pre_computed_evals['_'.join(sorted(my_cards+x[:2]))] > pre_computed_evals['_'.join(sorted(x))], possible_card_comb)
-#             prob = sum(result) / len(possible_card_comb)
-#             results['_'.join(sorted(my_cards)) + '_' + '_'.join(sorted(board_cards))] = prob
+for i in range(3):
+    for my_cards in possible_my_cards:
+        my_cards = list(my_cards)
+        possible_board_cards = list(itertools.combinations([c for c in cards if c not in my_cards], i))
+        for board_cards in possible_board_cards:
+            board_cards = list(board_cards)
+            leftover_cards = [f"{rank}{suit}" for rank in "123456789" for suit in "shd" if f"{rank}{suit}" not in my_cards + board_cards]
+            possible_card_comb = list(itertools.permutations(leftover_cards, 4 - len(board_cards)))
+            possible_card_comb = [board_cards + list(c) for c in possible_card_comb]
+            result = map(lambda x: pre_computed_evals['_'.join(sorted(my_cards+x[:2]))] > pre_computed_evals['_'.join(sorted(x))], possible_card_comb)
+            prob = sum(result) / len(possible_card_comb)
+            results['_'.join(sorted(my_cards)) + '_' + '_'.join(sorted(board_cards))] = prob
 
-# print(len(results))
-# pickle.dump(results, open("results.pkl", "wb"))
+print(len(results))
+pickle.dump(results, open("pre_computed_probs.pkl", "wb"))

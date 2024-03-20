@@ -29,7 +29,7 @@ class Player(Bot):
         Nothing.
         """
         self.log = []
-        self.pre_computed_probs = pickle.load(open("python_skeleton/pre_computed_probs.pkl", "rb")) 
+        self.pre_computed_probs = pickle.load(open("python_skeleton/skeleton/pre_computed_probs.pkl", "rb")) 
         pass
 
     def handle_new_round(self, game_state: GameState, round_state: RoundState, active: int) -> None:
@@ -108,6 +108,14 @@ class Player(Bot):
         self.log.append("My contribution: " + str(my_contribution))
         self.log.append("My bankroll: " + str(my_bankroll))
 
+        # Original probability calculation
+        # leftover_cards = [f"{rank}{suit}" for rank in "123456789" for suit in "shd" if f"{rank}{suit}" not in my_cards + board_cards]
+        # possible_card_comb = list(itertools.permutations(leftover_cards, 4 - len(board_cards)))
+        # possible_card_comb = [board_cards + list(c) for c in possible_card_comb]
+        # result = map(lambda x: self.pre_computed_evals['_'.join(sorted(my_cards+x[:2]))] > self.pre_computed_evals['_'.join(sorted(x))], possible_card_comb)
+        # prob = sum(result) / len(possible_card_comb)
+
+        # Use pre-computed probability calculation
         prob = self.pre_computed_probs['_'.join(sorted(my_cards)) + '_' + '_'.join(sorted(board_cards))]
 
         expected_gain = prob * max(my_contribution, opp_contribution) - (1 - prob) * max(my_contribution, opp_contribution)
