@@ -130,9 +130,9 @@ def evaluate(hand: List[str], board: List[str]) -> int:
     elif is_two_pair(combined_hand):
         return 6000 + high_card_value(combined_hand)
     elif is_4flush(combined_hand):
-        return 4000 + high_card_value(combined_hand)
+        return 5000 + high_card_value(combined_hand)
     elif is_straight(combined_hand):
-        return 3000 + high_card_value(find_straight(combined_hand))
+        return 4000 + high_card_value(find_straight(combined_hand))
     elif is_3flush(combined_hand):
         return 3000 + high_card_value(find_flush(combined_hand))
     elif is_pair(combined_hand):
