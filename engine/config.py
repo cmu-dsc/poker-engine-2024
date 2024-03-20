@@ -50,10 +50,7 @@ def get_credentials():
         credentials, _ = default()
         return credentials
     except DefaultCredentialsError:
-        print("Authentication credentials not found.")
-        print(
-            "Please set the GOOGLE_APPLICATION_CREDENTIALS environment variable or authenticate using the gcloud CLI."
-        )
+        print("Google Cloud Authentication credentials not found, writing logs locally.")
         return None
 
 
