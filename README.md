@@ -49,7 +49,7 @@ streamlit run visualize.py
 
 Refer to ```test_gym_env.py``` and ```engine/gym_env.py``` for more details.
 
-
+### With multiple bots
 ```python
 from engine.gym_env import PokerEnv 
 
@@ -63,5 +63,17 @@ while not done:
         action = bot1(obs1)
     else:
         action = bot2(obs2)
+    (obs1, obs2), (reward1, reward2), done, _, _ = env.step(action)
+```
+
+### With a single bot (enemy bot fixed)
+```python
+env = PokerEnv(num_rounds=10, opp_bot=random_bot)
+(obs1, obs2) = env.reset()
+bot1 = random_bot
+
+done = False
+while not done:
+    action = bot1(obs1)
     (obs1, obs2), (reward1, reward2), done, _, _ = env.step(action)
 ```

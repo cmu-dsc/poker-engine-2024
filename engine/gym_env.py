@@ -29,7 +29,7 @@ class PokerEnv(gym.Env):
     """
     Manages logging and the high-level game procedure.
     """
-    def __init__(self, num_rounds, init_enemy=None) -> None:
+    def __init__(self, num_rounds, opp_bot=None) -> None:
         super().__init__()
         self.num_rounds = num_rounds
 
@@ -42,7 +42,7 @@ class PokerEnv(gym.Env):
         # Observation space is a Dict. 
         # Since we have two players, is_my_turn is a Discrete(2)
         # Make sure to check is_my_turn before taking an action
-        # enemy_shown_card is "XX" if the enemy's card is not shown
+        # opp_shown_card is "XX" if the opp's card is not shown
         # Two players, so the observation space is a Tuple of two single_observation_spaces
         card_space = spaces.Text(min_length=2, max_length=2)
         observation_space = spaces.Dict({
@@ -58,16 +58,17 @@ class PokerEnv(gym.Env):
             "my_bankroll": spaces.Box(low=-400*NUM_ROUNDS, high=400*NUM_ROUNDS, shape=(), dtype=int),
             "min_raise": spaces.Box(low=0, high=400, shape=(), dtype=int),
             "max_raise": spaces.Box(low=0, high=400, shape=(), dtype=int),
-            "enemy_shown_card": card_space,
+            "opp_shown_card": card_space,
         })
         self.observation_space = spaces.Tuple([observation_space, observation_space])
 
         self.curr_round_state = None
         self.curr_round_num = 1
         self.player_last_actions = [None, None]
+        self.opp_bot = opp_bot
         self.reset()
 
-    def _get_observation(self, player_num: int, enemy_shown_card="XX"):
+    def _get_observation(self, player_num: int, opp_shown_card="XX"):
         """
         Returns the observation for the player_num player.
         """ 
@@ -94,7 +95,7 @@ class PokerEnv(gym.Env):
             "my_bankroll": my_bankroll,
             "min_raise": min_raise,
             "max_raise": max_raise,
-            "enemy_shown_card": enemy_shown_card,
+            "opp_shown_card": opp_shown_card,
         }
 
     def _end_round(self, round_state: TerminalState):
@@ -104,22 +105,23 @@ class PokerEnv(gym.Env):
         """
         for index, delta in enumerate(round_state.deltas):
             self.bankrolls[index] += delta
-        was_last_round = self.curr_round_num == self.num_rounds
+        was_last_round = self.curr_round_num >= self.num_rounds
         self._reset_round()
         self.curr_round_num += 1
 
-        enemy_shown_cards = []
+        opp_shown_cards = []
         for player_num in range(2):
             if self.player_last_actions[player_num] != FoldAction:
-                enemy_shown_cards.append(round_state.previous_state.hands[1 - player_num])
+                opp_shown_cards.append(round_state.previous_state.hands[1 - player_num])
 
-        return (self._get_observation(0, enemy_shown_cards[0]), self._get_observation(1, enemy_shown_cards[1])), tuple(round_state.deltas), was_last_round, False, None
+        return (self._get_observation(0, opp_shown_cards[0]), self._get_observation(1, opp_shown_cards[1])), tuple(round_state.deltas), was_last_round, False, None
 
-    def step(self, action):
+    def _step_without_opp(self, action):
         """
         Takes a step in the game, given the action taken by the active player.
         """
         active = self.curr_round_state.button % 2
+        # print(active)
         action_type, amount = action
         if action_type == 3:
             action = RaiseAction(amount)
@@ -139,6 +141,22 @@ class PokerEnv(gym.Env):
             return self._end_round(self.curr_round_state)
         
         return (self._get_observation(0), self._get_observation(1)), (0,0), False, False, None
+
+    def _step_with_opp(self, action):
+        assert self.opp_bot is not None
+        assert self.curr_round_state.button % 2 == 0
+        (obs1, obs2), reward, done, trunc, info = self._step_without_opp(action)
+        while obs2["is_my_turn"]:
+            action2 = self.opp_bot(obs2)        
+            print(f"Opponent's action: {action2}")
+            (obs1, obs2), reward, done, trunc, info = self._step_without_opp(action2)  
+        return (obs1, obs2), reward, done, trunc, info
+
+    def step(self, action):
+        if self.opp_bot is None:
+            return self._step_without_opp(action)
+        else:
+            return self._step_with_opp(action)
 
     def _reset_round(self):
         """
