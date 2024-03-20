@@ -22,10 +22,10 @@ TOTAL: 17550 combos
 from random import shuffle
 from typing import List
 from itertools import combinations
-from functools import cache
+
 
 class ShortDeck:
-    """Custom deck for the poker variant with cards ranked 1 to 6 across 3 suits."""
+    """Custom deck for the poker variant with cards ranked 1 to 9 across 3 suits."""
 
     def __init__(self):
         self.cards = [f"{rank}{suit}" for rank in "123456789" for suit in "shd"]
@@ -142,7 +142,7 @@ def evaluate(hand: List[str], board: List[str]) -> int:
 
 
 def evaluate_with_str(cards: str) -> int:
-    combined_hand = cards.split('_')
+    combined_hand = cards.split("_")
     combined_hand = sorted(combined_hand, key=lambda x: int(x[0]), reverse=True)
     assert len(combined_hand) == 4
 
@@ -162,7 +162,8 @@ def evaluate_with_str(cards: str) -> int:
         return 2000 + frequent_card_value(combined_hand)
     else:
         return 1000 + high_card_value(combined_hand)
-    
+
+
 import itertools
 import pickle
 
