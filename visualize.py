@@ -9,7 +9,7 @@ def renew_action_num():
 
 def use_default_logs():
     st.session_state.use_default_logs = True
-    with open("logs/gamelog.txt", "r") as log_file:
+    with open("logs/engine_log.txt", "r") as log_file:
         # Split the logs by empty lines
         log = log_file.read().split("\n\n")
     st.session_state.uploaded_log = log
@@ -26,21 +26,22 @@ def card_name_to_full_name(card_name):
     return f"{number}_of_{suit_to_word[suit]}"
     
 
-def update_table_image(player1_card_img, player2_card_img, player1_bet, player2_bet, community_cards, player1_wins, log):
+def update_table_image(player1_cards, player2_cards, player1_bet, player2_bet, community_cards, player1_wins, log):
     """
     Update the poker table image with the given player cards.
     """
     table_img = Image.open("images/poker_table.png")
-    player1_card_img = Image.open(player1_card_img)
-    player2_card_img = Image.open(player2_card_img)
+    player1_cards = [Image.open(card) for card in player1_cards]
+    player2_cards = [Image.open(card) for card in player2_cards]
     community_cards = [Image.open(card) for card in community_cards]
 
     # Resize the images while maintaining the aspect ratio
-    player1_card_img.thumbnail((250, 250))
-    player2_card_img.thumbnail((250, 250))
+    for i in range(len(player1_cards)):
+        player1_cards[i].thumbnail((250, 250))
+        player2_cards[i].thumbnail((250, 250))
     for i in range(len(community_cards)):
         community_cards[i].thumbnail((250, 250))
-    card_width, card_height = player1_card_img.size
+    card_width, card_height = player1_cards[0].size
 
     # Add bet as text 
     player1_bet_text = f"Bet: {player1_bet}"
@@ -48,12 +49,13 @@ def update_table_image(player1_card_img, player2_card_img, player1_bet, player2_
     font_size = 70
     font = ImageFont.truetype("images/CinzelDecorative-Bold.ttf", font_size)
     draw = ImageDraw.Draw(table_img)
-    draw.text((table_img.width // 2 + card_width // 2 + 100, table_img.height // 2 - font_size + 350), player1_bet_text, fill="gold", font=font)
-    draw.text((table_img.width // 2 + card_width // 2 + 100, table_img.height // 2 - font_size - 350), player2_bet_text, fill="gold", font=font)
+    draw.text((table_img.width // 2 + card_width // 2 + 300, table_img.height // 2 - font_size + 350), player1_bet_text, fill="gold", font=font)
+    draw.text((table_img.width // 2 + card_width // 2 + 300, table_img.height // 2 - font_size - 350), player2_bet_text, fill="gold", font=font)
     
     # Past cards on the table
-    table_img.paste(player1_card_img, (table_img.width // 2 - card_width // 2, table_img.height // 2 - card_height // 2 + 400))
-    table_img.paste(player2_card_img, (table_img.width // 2 - card_width // 2, table_img.height // 2 - card_height // 2 - 400))
+    for i in range(len(player1_cards)):
+        table_img.paste(player1_cards[i], (table_img.width // 2 - card_width // 2 + 300 * i - 150, table_img.height // 2 - card_height // 2 + 400))
+        table_img.paste(player2_cards[i], (table_img.width // 2 - card_width // 2 + 300 * i - 150, table_img.height // 2 - card_height // 2 - 400))
     for i in range(len(community_cards)):
         table_img.paste(community_cards[i], (table_img.width // 2 - card_width // 2 + 300 * i - 150, table_img.height // 2 - card_height // 2))
 
@@ -80,13 +82,12 @@ def get_poker_table(round_log, action_num):
     round_log = round_log.split("\n")
 
     # Get the cards for the players
-    player1_card = round_log[3].split("dealt ")[1]
-    player2_card = round_log[4].split("dealt ")[1]
-    player1_card = ast.literal_eval(player1_card)[0]
-    player2_card = ast.literal_eval(player2_card)[0]
-
-    player1_card_img = f"images/cards/{card_name_to_full_name(player1_card)}.png"
-    player2_card_img = f"images/cards/{card_name_to_full_name(player2_card)}.png"
+    player1_cards = round_log[3].split("dealt ")[1]
+    player2_cards = round_log[4].split("dealt ")[1]
+    player1_cards = ast.literal_eval(player1_cards)
+    player2_cards = ast.literal_eval(player2_cards)
+    player1_cards = [f"images/cards/{card_name_to_full_name(card)}.png" for card in player1_cards]
+    player2_cards = [f"images/cards/{card_name_to_full_name(card)}.png" for card in player2_cards]
 
     # Get blinds 
     blind1 = round_log[1].split(" posts")[0][-1]
@@ -99,7 +100,7 @@ def get_poker_table(round_log, action_num):
     player1_wins = None
 
     if action_num == 0:
-        return update_table_image(player1_card_img, player2_card_img, player1_bet, player2_bet, community_cards, player1_wins, round_log[4])
+        return update_table_image(player1_cards, player2_cards, player1_bet, player2_bet, community_cards, player1_wins, round_log[4])
     
     for i in range(5, len(round_log)):
         if "Board" in round_log[i]:
@@ -119,9 +120,9 @@ def get_poker_table(round_log, action_num):
             player1_wins = round_log[i].split(" awarded ")[0] == "bot1"
 
         if i == 5 + action_num - 1:
-            return update_table_image(player1_card_img, player2_card_img, player1_bet, player2_bet, community_cards, player1_wins, round_log[i])
+            return update_table_image(player1_cards, player2_cards, player1_bet, player2_bet, community_cards, player1_wins, round_log[i])
 
-    return update_table_image(player1_card_img, player2_card_img, player1_bet, player2_bet, community_cards, player1_wins, round_log[i])
+    return update_table_image(player1_cards, player2_cards, player1_bet, player2_bet, community_cards, player1_wins, round_log[i])
 
 
 def visualize(logs):
