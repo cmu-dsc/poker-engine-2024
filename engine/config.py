@@ -100,18 +100,19 @@ def add_match_entry(player1_bankroll: int, player2_bankroll: int) -> None:
     credentials = get_credentials()
     DATASET_ID = os.getenv("DATASET_ID")
     if not (credentials and DATASET_ID):
+        print("No credentials or dataset found, skipping updating table.")
         return
 
     client = bigquery.Client(credentials=credentials)
 
     # Check if player names exist in the 'teams' table
     query_teams = f"""
-        SELECT teamName
+        SELECT githubUsername
         FROM `{DATASET_ID}.teams`
-        WHERE teamName IN ('{PLAYER_1_NAME}', '{PLAYER_2_NAME}')
+        WHERE githubUsername IN ('{PLAYER_1_NAME}', '{PLAYER_2_NAME}')
     """
     query_job = client.query(query_teams)
-    teams = set(row["teamName"] for row in query_job.result())
+    teams = set(row["githubUsername"] for row in query_job.result())
 
     if PLAYER_1_NAME not in teams or PLAYER_2_NAME not in teams:
         print(
