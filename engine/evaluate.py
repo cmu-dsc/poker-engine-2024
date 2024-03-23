@@ -12,7 +12,7 @@ straight flush (18): 2d 3d 4d 5d
 trips (216): 6d 6s 6h
 two pair (324): 4s 4h 9d 9h
 4-flush (360): 2h 5h 6h 7h
-4-straight (468): 6h 7h 8d
+4-straight (468): 6h 7h 8d 9d
 3-straight (2907): 6h 7h 8d
 pair (6237): 2h 2d
 high card (7020): everything else
