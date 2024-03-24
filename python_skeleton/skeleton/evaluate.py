@@ -12,10 +12,10 @@ straight flush (18): 2d 3d 4d 5d
 trips (216): 6d 6s 6h
 two pair (324): 4s 4h 9d 9h
 4-flush (360): 2h 5h 6h 7h
-3-straight (3186): 6h 7h 8d
-3-flush (3588): 2h 7h 9h
-pair (4998): 2h 2d
-high card (4998): everything else
+4-straight (468): 6h 7h 8d 9d
+3-straight (2907): 6h 7h 8d
+pair (6237): 2h 2d
+high card (7020): everything else
 TOTAL: 17550 combos
 """
 
@@ -40,7 +40,7 @@ class ShortDeck:
 
 
 def is_straight_flush(hand: List[str]) -> bool:
-    return num_flushes(hand) == 4 and num_straights(hand) == 2
+    return is_4flush(hand) and is_4straight(hand)
 
 
 def is_trips(hand: List[str]) -> bool:
@@ -52,36 +52,25 @@ def is_two_pair(hand: List[str]) -> bool:
 
 
 def is_4flush(hand: List[str]) -> bool:
-    return num_flushes(hand) == 4
+    suits = [card[1] for card in hand]
+    return len(set(suits)) == 1
 
 
-def is_straight(hand: List[str]) -> bool:
-    return num_straights(hand) > 0
+def is_4straight(hand: List[str]) -> bool:
+    ranks = [int(card[0]) for card in hand]
+    return max(ranks) - min(ranks) == 3 and len(set(ranks)) == 4
 
 
-def is_3flush(hand: List[str]) -> bool:
-    return num_flushes(hand) == 1
+def is_3straight(hand: List[str]) -> bool:
+    ranks = sorted(int(card[0]) for card in hand)
+    for combo in combinations(ranks, 3):
+        if combo[0] == combo[1] - 1 and combo[1] == combo[2] - 1:
+            return True
+    return False
 
 
 def is_pair(hand: List[str]) -> bool:
     return num_pairs(hand) == 1
-
-
-def num_flushes(hand: List[str]) -> int:
-    ans = 0
-    for combo in combinations(hand, 3):
-        if combo[0][1] == combo[1][1] and combo[1][1] == combo[2][1]:
-            ans += 1
-    return ans
-
-
-def num_straights(hand: List[str]) -> int:
-    ans = 0
-    ranks = sorted(int(card[0]) for card in hand)
-    for combo in combinations(ranks, 3):
-        if combo[0] == combo[1] - 1 and combo[1] == combo[2] - 1:
-            ans += 1
-    return ans
 
 
 def num_pairs(hand: List[str]) -> int:
@@ -103,19 +92,11 @@ def frequent_card_value(hand: List[str]) -> int:
     return sum(rank * (10**i) for i, rank in enumerate(ranks))
 
 
-def find_flush(hand: List[str]) -> List[str]:
-    if hand[0][1] == hand[1][1] or hand[0][1] == hand[2][1]:
-        suit = hand[0][1]
-    else:
-        suit = hand[1][1]
-
-    return list(filter(lambda x: x[1] == suit, hand))
-
-
 def find_straight(hand: List[str]) -> List[str]:
     s1 = list(sorted(hand))[1:4]
     s2 = list(sorted(hand))[0:3]
-    if num_straights(s1) > 0:
+    ranks = list(sorted([int(card[0]) for card in hand]))
+    if ranks[2] - ranks[0] == 2:
         return s1
     else:
         return s2
@@ -131,10 +112,10 @@ def evaluate(hand: List[str], board: List[str]) -> int:
         return 60000 + high_card_value(combined_hand)
     elif is_4flush(combined_hand):
         return 50000 + high_card_value(combined_hand)
-    elif is_straight(combined_hand):
-        return 40000 + high_card_value(find_straight(combined_hand))
-    elif is_3flush(combined_hand):
-        return 30000 + high_card_value(find_flush(combined_hand))
+    elif is_4straight(combined_hand):
+        return 40000 + high_card_value(combined_hand)
+    elif is_3straight(combined_hand):
+        return 30000 + high_card_value(find_straight(combined_hand))
     elif is_pair(combined_hand):
         return 20000 + frequent_card_value(combined_hand)
     else:
@@ -144,24 +125,22 @@ def evaluate(hand: List[str], board: List[str]) -> int:
 def evaluate_with_str(cards: str) -> int:
     combined_hand = cards.split("_")
     combined_hand = sorted(combined_hand, key=lambda x: int(x[0]), reverse=True)
-    assert len(combined_hand) == 4
-
     if is_straight_flush(combined_hand):
-        return 8000 + high_card_value(combined_hand)
+        return 80000 + high_card_value(combined_hand)
     elif is_trips(combined_hand):
-        return 7000 + frequent_card_value(combined_hand)
+        return 70000 + frequent_card_value(combined_hand)
     elif is_two_pair(combined_hand):
-        return 6000 + high_card_value(combined_hand)
+        return 60000 + high_card_value(combined_hand)
     elif is_4flush(combined_hand):
-        return 4000 + high_card_value(combined_hand)
-    elif is_straight(combined_hand):
-        return 3000 + high_card_value(find_straight(combined_hand))
-    elif is_3flush(combined_hand):
-        return 3000 + high_card_value(find_flush(combined_hand))
+        return 50000 + high_card_value(combined_hand)
+    elif is_4straight(combined_hand):
+        return 40000 + high_card_value(combined_hand)
+    elif is_3straight(combined_hand):
+        return 30000 + high_card_value(find_straight(combined_hand))
     elif is_pair(combined_hand):
-        return 2000 + frequent_card_value(combined_hand)
+        return 20000 + frequent_card_value(combined_hand)
     else:
-        return 1000 + high_card_value(combined_hand)
+        return 10000 + high_card_value(combined_hand)
 
 
 import itertools
@@ -183,15 +162,30 @@ results = dict()
 for i in range(3):
     for my_cards in possible_my_cards:
         my_cards = list(my_cards)
-        possible_board_cards = list(itertools.combinations([c for c in cards if c not in my_cards], i))
+        possible_board_cards = list(
+            itertools.combinations([c for c in cards if c not in my_cards], i)
+        )
         for board_cards in possible_board_cards:
             board_cards = list(board_cards)
-            leftover_cards = [f"{rank}{suit}" for rank in "123456789" for suit in "shd" if f"{rank}{suit}" not in my_cards + board_cards]
-            possible_card_comb = list(itertools.permutations(leftover_cards, 4 - len(board_cards)))
+            leftover_cards = [
+                f"{rank}{suit}"
+                for rank in "123456789"
+                for suit in "shd"
+                if f"{rank}{suit}" not in my_cards + board_cards
+            ]
+            possible_card_comb = list(
+                itertools.permutations(leftover_cards, 4 - len(board_cards))
+            )
             possible_card_comb = [board_cards + list(c) for c in possible_card_comb]
-            result = map(lambda x: pre_computed_evals['_'.join(sorted(my_cards+x[:2]))] > pre_computed_evals['_'.join(sorted(x))], possible_card_comb)
+            result = map(
+                lambda x: pre_computed_evals["_".join(sorted(my_cards + x[:2]))]
+                > pre_computed_evals["_".join(sorted(x))],
+                possible_card_comb,
+            )
             prob = sum(result) / len(possible_card_comb)
-            results['_'.join(sorted(my_cards)) + '_' + '_'.join(sorted(board_cards))] = prob
+            results[
+                "_".join(sorted(my_cards)) + "_" + "_".join(sorted(board_cards))
+            ] = prob
 
 print(len(results))
 pickle.dump(results, open("pre_computed_probs.pkl", "wb"))
