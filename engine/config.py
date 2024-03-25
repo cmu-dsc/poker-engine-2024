@@ -128,10 +128,10 @@ def add_match_entry(player1_bankroll: int, player2_bankroll: int) -> None:
 
         try:
             with pool.connect() as db_conn:
-                # Check if player names exist in the 'teams' table
+                # Check if player names exist in the 'TeamDao' table
                 query_teams = sqlalchemy.text("""
                     SELECT githubUsername
-                    FROM teams
+                    FROM TeamDao
                     WHERE githubUsername IN (:player1, :player2)
                 """)
                 result = db_conn.execute(
@@ -142,58 +142,40 @@ def add_match_entry(player1_bankroll: int, player2_bankroll: int) -> None:
 
                 if PLAYER_1_NAME not in teams or PLAYER_2_NAME not in teams:
                     print(
-                        "One or both player names do not exist in the 'teams' table. Skipping entry."
+                        "One or both player names do not exist in the 'TeamDao' table. Skipping entry."
                     )
                     return
 
-                # Insert the match entry into the 'matches' table
-                insert_query = sqlalchemy.text("""
-                    INSERT INTO matches (matchId, team1Id, team2Id, timestamp, team1Bankroll, team2Bankroll)
-                    VALUES (:match_id, :team1, :team2, :timestamp, :bankroll1, :bankroll2)
+                # Insert the match entry into the 'MatchDao' table
+                insert_match_query = sqlalchemy.text("""
+                    INSERT INTO MatchDao (matchId, timestamp)
+                    VALUES (:match_id, :timestamp)
                 """)
                 timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 db_conn.execute(
-                    insert_query,
+                    insert_match_query,
+                    {"match_id": MATCH_ID, "timestamp": timestamp},
+                )
+
+                # Insert the team match entries into the 'TeamMatchDao' table
+                insert_team_match_query = sqlalchemy.text("""
+                    INSERT INTO TeamMatchDao (matchId, teamId, bankroll)
+                    VALUES (:match_id, :team1, :bankroll1),
+                        (:match_id, :team2, :bankroll2)
+                """)
+                db_conn.execute(
+                    insert_team_match_query,
                     {
                         "match_id": MATCH_ID,
                         "team1": PLAYER_1_NAME,
                         "team2": PLAYER_2_NAME,
-                        "timestamp": timestamp,
                         "bankroll1": player1_bankroll,
                         "bankroll2": player2_bankroll,
                     },
                 )
 
-                # Update the 'teams' table with win/loss counts
-                if player1_bankroll > player2_bankroll:
-                    update_query_wins = sqlalchemy.text("""
-                        UPDATE teams
-                        SET wins = wins + 1
-                        WHERE githubUsername = :winner
-                    """)
-                    update_query_losses = sqlalchemy.text("""
-                        UPDATE teams
-                        SET losses = losses + 1
-                        WHERE githubUsername = :loser
-                    """)
-                    db_conn.execute(update_query_wins, {"winner": PLAYER_1_NAME})
-                    db_conn.execute(update_query_losses, {"loser": PLAYER_2_NAME})
-                elif player2_bankroll > player1_bankroll:
-                    update_query_wins = sqlalchemy.text("""
-                        UPDATE teams
-                        SET wins = wins + 1
-                        WHERE githubUsername = :winner
-                    """)
-                    update_query_losses = sqlalchemy.text("""
-                        UPDATE teams
-                        SET losses = losses + 1
-                        WHERE githubUsername = :loser
-                    """)
-                    db_conn.execute(update_query_wins, {"winner": PLAYER_2_NAME})
-                    db_conn.execute(update_query_losses, {"loser": PLAYER_1_NAME})
-
                 db_conn.commit()
-                print("Match entry added and teams table updated successfully.")
+                print("Match entry added successfully.")
 
         except Exception as e:
             print(f"Error while interacting with the database: {str(e)}")
