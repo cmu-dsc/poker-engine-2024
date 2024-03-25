@@ -6,8 +6,9 @@ from typing import List, Union
 
 from google.auth import default
 from google.auth.exceptions import DefaultCredentialsError
-from google.cloud import bigquery
 from google.cloud import storage
+from google.cloud.sql.connector import Connector
+import sqlalchemy
 
 # PARAMETERS TO CONTROL THE BEHAVIOR OF THE GAME ENGINE
 
@@ -50,7 +51,9 @@ def get_credentials():
         credentials, _ = default()
         return credentials
     except DefaultCredentialsError:
-        print("Google Cloud Authentication credentials not found, writing logs locally.")
+        print(
+            "Google Cloud Authentication credentials not found, writing logs locally."
+        )
         return None
 
 
@@ -91,49 +94,100 @@ def upload_logs(log: Union[List[str], List[List[str]]], log_filename: str) -> bo
 
 def add_match_entry(player1_bankroll: int, player2_bankroll: int) -> None:
     """
-    Adds an entry to the 'matches' table in BigQuery.
+    Adds an entry to the 'matches' table in Cloud SQL MySQL and updates the 'teams' table.
 
     Args:
         player1_bankroll (int): The final bankroll of player 1.
         player2_bankroll (int): The final bankroll of player 2.
     """
-    credentials = get_credentials()
-    DATASET_ID = os.getenv("DATASET_ID")
-    if not (credentials and DATASET_ID):
-        print("No credentials or dataset found, skipping updating table.")
-        return
+    instance_connection_name = os.environ["INSTANCE_CONNECTION_NAME"]
+    db_user = os.environ["DB_USER"]
+    db_pass = os.environ["DB_PASS"]
+    db_name = os.environ["DB_NAME"]
 
-    client = bigquery.Client(credentials=credentials)
+    with Connector() as connector:
 
-    # Check if player names exist in the 'teams' table
-    query_teams = f"""
-        SELECT githubUsername
-        FROM `{DATASET_ID}.teams`
-        WHERE githubUsername IN ('{PLAYER_1_NAME}', '{PLAYER_2_NAME}')
-    """
-    query_job = client.query(query_teams)
-    teams = set(row["githubUsername"] for row in query_job.result())
+        def getconn() -> sqlalchemy.engine.base.Connection:
+            conn = connector.connect(
+                instance_connection_name,
+                "pymysql",
+                user=db_user,
+                password=db_pass,
+                db=db_name,
+            )
+            return conn
 
-    if PLAYER_1_NAME not in teams or PLAYER_2_NAME not in teams:
-        print(
-            "One or both player names do not exist in the 'teams' table. Skipping entry."
+        pool = sqlalchemy.create_engine(
+            "mysql+pymysql://",
+            creator=getconn,
         )
-        return
 
-    # Insert the match entry into the 'matches' table
-    row_to_insert = [
-        {
-            "matchId": MATCH_ID,
-            "team1Name": PLAYER_1_NAME,
-            "team2Name": PLAYER_2_NAME,
-            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "team1Bankroll": player1_bankroll,
-            "team2Bankroll": player2_bankroll,
-        }
-    ]
+        try:
+            with pool.connect() as db_conn:
+                # Check if player names exist in the 'teams' table
+                query_teams = sqlalchemy.text("""
+                    SELECT githubUsername
+                    FROM teams
+                    WHERE githubUsername IN (:player1, :player2)
+                """)
+                result = db_conn.execute(
+                    query_teams, player1=PLAYER_1_NAME, player2=PLAYER_2_NAME
+                )
+                teams = set(row[0] for row in result)
 
-    errors = client.insert_rows_json(f"{DATASET_ID}.matches", row_to_insert)
-    if errors:
-        print(f"Encountered errors while inserting row: {errors}")
-    else:
-        print("Match entry added successfully.")
+                if PLAYER_1_NAME not in teams or PLAYER_2_NAME not in teams:
+                    print(
+                        "One or both player names do not exist in the 'teams' table. Skipping entry."
+                    )
+                    return
+
+                # Insert the match entry into the 'matches' table
+                insert_query = sqlalchemy.text("""
+                    INSERT INTO matches (matchId, team1Id, team2Id, timestamp, team1Bankroll, team2Bankroll)
+                    VALUES (:match_id, :team1, :team2, :timestamp, :bankroll1, :bankroll2)
+                """)
+                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                db_conn.execute(
+                    insert_query,
+                    match_id=MATCH_ID,
+                    team1=PLAYER_1_NAME,
+                    team2=PLAYER_2_NAME,
+                    timestamp=timestamp,
+                    bankroll1=player1_bankroll,
+                    bankroll2=player2_bankroll,
+                )
+
+                # Update the 'teams' table with win/loss counts
+                if player1_bankroll > player2_bankroll:
+                    update_query = sqlalchemy.text("""
+                        UPDATE teams
+                        SET wins = wins + 1
+                        WHERE githubUsername = :winner;
+
+                        UPDATE teams
+                        SET losses = losses + 1
+                        WHERE githubUsername = :loser;
+                    """)
+                    db_conn.execute(
+                        update_query, winner=PLAYER_1_NAME, loser=PLAYER_2_NAME
+                    )
+                elif player2_bankroll > player1_bankroll:
+                    update_query = sqlalchemy.text("""
+                        UPDATE teams
+                        SET wins = wins + 1
+                        WHERE githubUsername = :winner;
+
+                        UPDATE teams
+                        SET losses = losses + 1
+                        WHERE githubUsername = :loser;
+                    """)
+                    db_conn.execute(
+                        update_query, winner=PLAYER_2_NAME, loser=PLAYER_1_NAME
+                    )
+
+                db_conn.commit()
+                print("Match entry added and teams table updated successfully.")
+
+        except Exception as e:
+            print(f"Error while interacting with the database: {str(e)}")
+            db_conn.rollback()
