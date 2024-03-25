@@ -105,6 +105,10 @@ def add_match_entry(player1_bankroll: int, player2_bankroll: int) -> None:
     db_pass = os.environ["DB_PASS"]
     db_name = os.environ["DB_NAME"]
 
+    if not instance_connection_name and db_user and db_pass and db_name:
+        print("No connection name or db found, skipping updating table.")
+        return
+
     with Connector() as connector:
 
         def getconn() -> sqlalchemy.engine.base.Connection:
@@ -131,7 +135,8 @@ def add_match_entry(player1_bankroll: int, player2_bankroll: int) -> None:
                     WHERE githubUsername IN (:player1, :player2)
                 """)
                 result = db_conn.execute(
-                    query_teams, player1=PLAYER_1_NAME, player2=PLAYER_2_NAME
+                    query_teams,
+                    {"player1": PLAYER_1_NAME, "player2": PLAYER_2_NAME},
                 )
                 teams = set(row[0] for row in result)
 
@@ -149,41 +154,43 @@ def add_match_entry(player1_bankroll: int, player2_bankroll: int) -> None:
                 timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 db_conn.execute(
                     insert_query,
-                    match_id=MATCH_ID,
-                    team1=PLAYER_1_NAME,
-                    team2=PLAYER_2_NAME,
-                    timestamp=timestamp,
-                    bankroll1=player1_bankroll,
-                    bankroll2=player2_bankroll,
+                    {
+                        "match_id": MATCH_ID,
+                        "team1": PLAYER_1_NAME,
+                        "team2": PLAYER_2_NAME,
+                        "timestamp": timestamp,
+                        "bankroll1": player1_bankroll,
+                        "bankroll2": player2_bankroll,
+                    },
                 )
 
                 # Update the 'teams' table with win/loss counts
                 if player1_bankroll > player2_bankroll:
-                    update_query = sqlalchemy.text("""
+                    update_query_wins = sqlalchemy.text("""
                         UPDATE teams
                         SET wins = wins + 1
-                        WHERE githubUsername = :winner;
-
+                        WHERE githubUsername = :winner
+                    """)
+                    update_query_losses = sqlalchemy.text("""
                         UPDATE teams
                         SET losses = losses + 1
-                        WHERE githubUsername = :loser;
+                        WHERE githubUsername = :loser
                     """)
-                    db_conn.execute(
-                        update_query, winner=PLAYER_1_NAME, loser=PLAYER_2_NAME
-                    )
+                    db_conn.execute(update_query_wins, {"winner": PLAYER_1_NAME})
+                    db_conn.execute(update_query_losses, {"loser": PLAYER_2_NAME})
                 elif player2_bankroll > player1_bankroll:
-                    update_query = sqlalchemy.text("""
+                    update_query_wins = sqlalchemy.text("""
                         UPDATE teams
                         SET wins = wins + 1
-                        WHERE githubUsername = :winner;
-
+                        WHERE githubUsername = :winner
+                    """)
+                    update_query_losses = sqlalchemy.text("""
                         UPDATE teams
                         SET losses = losses + 1
-                        WHERE githubUsername = :loser;
+                        WHERE githubUsername = :loser
                     """)
-                    db_conn.execute(
-                        update_query, winner=PLAYER_2_NAME, loser=PLAYER_1_NAME
-                    )
+                    db_conn.execute(update_query_wins, {"winner": PLAYER_2_NAME})
+                    db_conn.execute(update_query_losses, {"loser": PLAYER_1_NAME})
 
                 db_conn.commit()
                 print("Match entry added and teams table updated successfully.")
