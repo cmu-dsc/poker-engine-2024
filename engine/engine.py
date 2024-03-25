@@ -191,20 +191,20 @@ class Game:
         """
         Finalizes the game log, writing it to a file and uploading it.
         """
-        csv_filename = os.path.join(LOGS_DIRECTORY, f"{GAME_LOG_FILENAME}.csv")
+        csv_filename = f"{GAME_LOG_FILENAME}.csv"
         self._upload_or_write_file(self.csvlog, csv_filename, is_csv=True)
 
-        log_filename = os.path.join(LOGS_DIRECTORY, f"{GAME_LOG_FILENAME}.txt")
+        log_filename = f"{GAME_LOG_FILENAME}.txt"
         self._upload_or_write_file(self.log, log_filename)
 
         for player in self.players:
-            player_log_dir = os.path.join(LOGS_DIRECTORY, player.name)
-            log_filename = os.path.join(player_log_dir, f"{BOT_LOG_FILENAME}.txt")
+            log_filename = os.path.join(player.name, f"{BOT_LOG_FILENAME}.txt")
             self._upload_or_write_file(player.log, log_filename)
 
     def _upload_or_write_file(self, content, base_filename, is_csv=False):
         filename = self._get_unique_filename(base_filename)
         if not upload_logs(content, filename):
+            filename = os.path.join(LOGS_DIRECTORY, filename)
             os.makedirs(os.path.dirname(filename), exist_ok=True)
             print(f"Writing {filename}")
             mode = "w"
