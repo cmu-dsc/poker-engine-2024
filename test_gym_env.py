@@ -60,7 +60,7 @@ while not done:
         print(f"Bot2: {num_to_action[action[0]]} {action[1]}")
     
     print("\n")
-    (obs1, obs2), (reward1, reward2), done, _, _ = env.step(action)
+    (obs1, obs2), (reward1, reward2), done, trunc, info = env.step(action)
     if reward1 != 0:
         print("New Round")
     print(obs1, reward1, done)
@@ -78,7 +78,7 @@ while not done:
     action = bot(obs)
     print(f"Bot1: {num_to_action[action[0]]} {action[1]}")
     print("\n")
-    obs, reward, done, _, info = env.step(action)
+    obs, reward, done, trunc, info = env.step(action)
     if reward != 0:
         print("New Round")
     print(obs, reward, done)
