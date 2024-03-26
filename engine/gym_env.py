@@ -59,12 +59,15 @@ class PokerEnv(gym.Env):
             "min_raise": spaces.Box(low=0, high=1, shape=(1,)),
             "max_raise": spaces.Box(low=0, high=1, shape=(1,)),
             "opp_shown_card": cards_space,
+            "round_num": spaces.Discrete(NUM_ROUNDS)
         })
 
         # If opp_bot is not None, the observation space is a single_observation_space (one player mode)
         if opp_bot is None:
+            self.game_mode = "two_player"
             self.observation_space = spaces.Tuple([self.observation_space_one_player, self.observation_space_one_player])
         else:
+            self.game_mode = "single_player"
             self.observation_space = self.observation_space_one_player
 
         self.curr_round_state = None
@@ -106,7 +109,8 @@ class PokerEnv(gym.Env):
             "my_bankroll": np.array(my_bankroll).reshape(1,),
             "min_raise": np.array(min_raise).reshape(1,),
             "max_raise": np.array(max_raise).reshape(1,),
-            "opp_shown_card": np.array(opp_shown_card)
+            "opp_shown_card": np.array(opp_shown_card),
+            "round_num": self.curr_round_num
         }
         # assert self.observation_space_one_player.contains(obs)
         return obs
@@ -127,7 +131,7 @@ class PokerEnv(gym.Env):
             if self.player_last_actions[player_num] != FoldAction:
                 opp_shown_cards.append(round_state.previous_state.hands[1 - player_num])
 
-        return (self._get_observation(0, opp_shown_cards[0]), self._get_observation(1, opp_shown_cards[1])), tuple(round_state.deltas), was_last_round, False, {}
+        return (self._get_observation(0, opp_shown_cards[0]), self._get_observation(1, opp_shown_cards[1])), tuple(round_state.deltas), was_last_round, False, {"mode": self.game_mode}
 
     def _step_without_opp(self, action):
         """
@@ -147,7 +151,7 @@ class PokerEnv(gym.Env):
         if isinstance(self.curr_round_state, TerminalState):
             return self._end_round(self.curr_round_state)
         
-        return (self._get_observation(0), self._get_observation(1)), (0,0), False, False, {}
+        return (self._get_observation(0), self._get_observation(1)), (0,0), False, False, {"mode": self.game_mode}
 
     def _step_with_opp(self, action):
         assert self.opp_bot is not None
@@ -159,19 +163,17 @@ class PokerEnv(gym.Env):
         return obs1, reward1, done, trunc, info
 
     def step(self, action):
-        if self.opp_bot is None:
+        assert self.curr_round_num <= self.num_rounds
+        if self.game_mode == "two_player":
             return self._step_without_opp(action)
-        else:
+        elif self.game_mode == "single_player":
             return self._step_with_opp(action)
 
     def _reset_round(self):
         """
         Resets the round.
         """
-
-        # Alternate the dealer
-        # self.players = self.players[::-1]  
-
+        
         # Shuffle the deck and deal the hands
         pips = [SMALL_BLIND, BIG_BLIND]
         stacks = [STARTING_STACK - SMALL_BLIND, STARTING_STACK - BIG_BLIND]
@@ -191,11 +193,9 @@ class PokerEnv(gym.Env):
         self.bankrolls = [0, 0]
         self.curr_round_num = 1
         obs1, obs2 = self._reset_round()
-        info = dict()
-        if self.opp_bot is not None:
-            info["mode"] = "single_player"
+        info = dict(mode=self.game_mode)
+        if self.game_mode == "single_player":
             return obs1, info
-        info["mode"] = "two_player"
         return (obs1, obs2), info
 
     def _validate_action(

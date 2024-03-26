@@ -47,6 +47,7 @@ num_to_action = {0: "Fold", 1: "Call", 2: "Check", 3: "Raise"}
 env = PokerEnv(10)
 (obs1, obs2), info = env.reset()
 bot1, bot2 = random_bot, random_bot
+print("\n"+"*"*50 + " Two player " + "*"*50)
 print(obs1)
 print(obs2)
 
@@ -71,6 +72,7 @@ while not done:
 env = PokerEnv(num_rounds=10, opp_bot=random_bot)
 obs, info = env.reset()
 bot = random_bot
+print("\n"+"*"*50 + " Single Player " + "*"*50)
 print(obs)
 
 done = False
