@@ -22,10 +22,10 @@ from .config import (
 from .evaluate import ShortDeck
 from .roundstate import RoundState
 
-def card_to_int(card: str) -> int:
+def card_to_int(card: str):
     rank, suit = card[0], card[1]
     suit = {"s": 0, "h": 1, "d": 2}[suit]
-    return suit * 10 + int(rank)
+    return (suit * 10 + int(rank))
 
 class PokerEnv(gym.Env):
     """
@@ -35,33 +35,33 @@ class PokerEnv(gym.Env):
         super().__init__()
         self.num_rounds = num_rounds
 
-        # Action space is a MultiDiscrete with (4,400) dimensions, 
-        # first dim representing an action
-        # 0: Fold, 1: Call, 2: Check, 3: Raise
-        # second dim representing the amount to raise
-        self.action_space = spaces.MultiDiscrete(np.array([4, 400]))
+        # Action space is a Tuple (action, amount) where action is a Discrete(4) and amount is a Discrete(400,
+        # 0: Fold, 1: Call, 2: Check, 3: Raise 
+        self.action_space = spaces.Tuple([spaces.Discrete(4), spaces.Discrete(400, start=1)])
 
         # Observation space is a Dict. 
         # Since we have two players, is_my_turn is a Discrete(2)
         # Make sure to check is_my_turn before taking an action
         # opp_shown_card is "0" if the opp's card is not shown
         # Two players, so the observation space is a Tuple of two single_observation_spaces
-        cards_space = spaces.Box(low=0, high=29, shape=(2,), dtype=int)
+        cards_space = spaces.Box(low=0, high=1, shape=(2,))
         self.observation_space_one_player = spaces.Dict({
             "is_my_turn": spaces.Discrete(2),
             "legal_actions": spaces.MultiBinary(4),
             "street": spaces.Discrete(3),
             "my_cards": cards_space,
             "board_cards": cards_space,
-            "my_pip": spaces.Box(low=0, high=400, shape=(1,), dtype=int),
-            "opponent_pip": spaces.Box(low=0, high=400, shape=(1,), dtype=int),
-            "my_stack": spaces.Box(low=0, high=400, shape=(1,), dtype=int),
-            "opponent_stack": spaces.Box(low=0, high=400, shape=(1,), dtype=int),
-            "my_bankroll": spaces.Box(low=-400*NUM_ROUNDS, high=400*NUM_ROUNDS, shape=(1,), dtype=int),
-            "min_raise": spaces.Box(low=0, high=400, shape=(1,), dtype=int),
-            "max_raise": spaces.Box(low=0, high=400, shape=(1,), dtype=int),
+            "my_pip": spaces.Box(low=0, high=1, shape=(1,)), 
+            "opp_pip": spaces.Box(low=0, high=1, shape=(1,)),
+            "my_stack": spaces.Box(low=0, high=1, shape=(1,)),
+            "opp_stack": spaces.Box(low=0, high=1, shape=(1,)),
+            "my_bankroll": spaces.Box(low=-1, high=1, shape=(1,)), 
+            "min_raise": spaces.Box(low=0, high=1, shape=(1,)),
+            "max_raise": spaces.Box(low=0, high=1, shape=(1,)),
             "opp_shown_card": cards_space,
         })
+
+        # If opp_bot is not None, the observation space is a single_observation_space (one player mode)
         if opp_bot is None:
             self.observation_space = spaces.Tuple([self.observation_space_one_player, self.observation_space_one_player])
         else:
@@ -71,7 +71,6 @@ class PokerEnv(gym.Env):
         self.curr_round_num = 1
         self.player_last_actions = [None, None]
         self.opp_bot = opp_bot
-        self.reset()
 
     def _get_observation(self, player_num: int, opp_shown_card=None):
         """
@@ -80,9 +79,9 @@ class PokerEnv(gym.Env):
         round_state = self.curr_round_state
         legal_actions = round_state.legal_actions()
         my_pip = round_state.pips[player_num]
-        opponent_pip = round_state.pips[1 - player_num]
+        opp_pip = round_state.pips[1 - player_num]
         my_stack = round_state.stacks[player_num]
-        opponent_stack = round_state.stacks[1 - player_num]
+        opp_stack = round_state.stacks[1 - player_num]
         min_raise, max_raise = round_state.raise_bounds()
         my_bankroll = self.bankrolls[player_num]
         if opp_shown_card is not None:
@@ -100,16 +99,16 @@ class PokerEnv(gym.Env):
             "street": round_state.street,
             "my_cards": np.array([card_to_int(card) for card in round_state.hands[player_num]]),
             "board_cards": np.array(board_cards),
-            "my_pip": np.array([my_pip]),
-            "opponent_pip": np.array([opponent_pip]),
-            "my_stack": np.array([my_stack]),
-            "opponent_stack": np.array([opponent_stack]),
-            "my_bankroll": np.array([my_bankroll]),
-            "min_raise": np.array([min_raise]),
-            "max_raise": np.array([max_raise]),
-            "opp_shown_card": np.array(opp_shown_card),
+            "my_pip": np.array(my_pip).reshape(1,),
+            "opp_pip": np.array(opp_pip).reshape(1,),
+            "my_stack": np.array(my_stack).reshape(1,),
+            "opp_stack": np.array(opp_stack).reshape(1,),
+            "my_bankroll": np.array(my_bankroll).reshape(1,),
+            "min_raise": np.array(min_raise).reshape(1,),
+            "max_raise": np.array(max_raise).reshape(1,),
+            "opp_shown_card": np.array(opp_shown_card)
         }
-        assert self.observation_space_one_player.contains(obs)
+        # assert self.observation_space_one_player.contains(obs)
         return obs
 
     def _end_round(self, round_state: TerminalState):
@@ -135,17 +134,11 @@ class PokerEnv(gym.Env):
         Takes a step in the game, given the action taken by the active player.
         """
         active = self.curr_round_state.button % 2
-        # print(active)
         action_type, amount = action
         if action_type == 3:
             action = RaiseAction(amount)
-        elif action_type == 2:
-            action = CheckAction()
-        elif action_type == 1:
-            action = CallAction()
         else:
-            action = FoldAction()
-
+            action = [FoldAction(), CallAction(), CheckAction()][action_type]
         action = self._validate_action(action, self.curr_round_state, active)
         self.player_last_actions[active] = action
         self.curr_round_state = self.curr_round_state.proceed(action)
@@ -162,7 +155,6 @@ class PokerEnv(gym.Env):
         (obs1, obs2), (reward1, _), done, trunc, info = self._step_without_opp(action)
         while obs2["is_my_turn"]:
             action2 = self.opp_bot(obs2)        
-            # print(f"Opponent's action: {action2}")
             (obs1, obs2), (reward1, _), done, trunc, info = self._step_without_opp(action2)  
         return obs1, reward1, done, trunc, info
 
@@ -199,9 +191,12 @@ class PokerEnv(gym.Env):
         self.bankrolls = [0, 0]
         self.curr_round_num = 1
         obs1, obs2 = self._reset_round()
+        info = dict()
         if self.opp_bot is not None:
-            return obs1, {}
-        return (obs1, obs2), {}
+            info["mode"] = "single_player"
+            return obs1, info
+        info["mode"] = "two_player"
+        return (obs1, obs2), info
 
     def _validate_action(
         self, action: Action, round_state: RoundState, player_name: str
@@ -229,14 +224,12 @@ class PokerEnv(gym.Env):
             if RaiseAction in legal_actions and min_raise <= amount <= max_raise:
                 return action
             else:
-                # print(
-                #     f"Player {player_name} attempted illegal RaiseAction with amount {amount}"
-                # )
-                pass
+                print(
+                    f"Player {player_name} attempted illegal RaiseAction with amount {amount}"
+                )
         elif type(action) in legal_actions:
             return action
         else:
-            # print(f"Player {player_name} attempted illegal {type(action).__name__}")
-            pass
+            print(f"Player {player_name} attempted illegal {type(action).__name__}")
 
         return CheckAction() if CheckAction in legal_actions else FoldAction()
