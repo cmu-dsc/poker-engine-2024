@@ -16,6 +16,7 @@ from .config import (
     ACTION_REQUEST_RETRIES,
     ENFORCE_GAME_CLOCK,
     STARTING_GAME_CLOCK,
+    PLAYER_LOG_SIZE_LIMIT,
 )
 
 shared_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "shared"))
@@ -56,6 +57,7 @@ class Client:
         self.channel = None
         self.stub = None
         self.log = deque()
+        self.log_size = 0
 
         self._connect_with_retries()
 
@@ -216,7 +218,21 @@ class Client:
         )
 
         try:
-            self.log.extend(self.stub.EndRound(end_round_message).logs)
+            new_logs = self.stub.EndRound(end_round_message).logs
+            for log_entry in new_logs:
+                entry_bytes = log_entry.encode("utf-8")
+                entry_size = len(entry_bytes)
+
+                if self.log_size + entry_size <= PLAYER_LOG_SIZE_LIMIT:
+                    self.log.append(log_entry)
+                    self.log_size += entry_size
+                else:
+                    if self.log_size < PLAYER_LOG_SIZE_LIMIT:
+                        self.log.append(
+                            "Log size limit reached. No further entries will be added."
+                        )
+                        self.log_size = PLAYER_LOG_SIZE_LIMIT
+                    break
         except grpc.RpcError as e:
             print(f"An error occurred: {e}")
 
