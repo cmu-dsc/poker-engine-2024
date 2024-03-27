@@ -105,8 +105,8 @@ def add_match_entry(player1_bankroll: int, player2_bankroll: int) -> None:
     db_pass = os.environ["DB_PASS"]
     db_name = os.environ["DB_NAME"]
 
-    if not instance_connection_name and db_user and db_pass and db_name:
-        print("No connection name or db found, skipping updating table.")
+    if not (instance_connection_name or db_user or db_pass or db_name):
+        print("No connection name or database credentials found, skipping updating table.")
         return
 
     with Connector() as connector:
@@ -118,6 +118,7 @@ def add_match_entry(player1_bankroll: int, player2_bankroll: int) -> None:
                 user=db_user,
                 password=db_pass,
                 db=db_name,
+                ip_type="private"
             )
             return conn
 
