@@ -41,7 +41,8 @@ pip install -r ./python_skeleton/requirements.txt
 ```
 
 ```bash
-pip install streamlit
+pip install streamlit==1.32.2
+pip install pillow==10.2.0
 streamlit run visualize.py
 ```
 
