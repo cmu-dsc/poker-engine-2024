@@ -36,6 +36,8 @@ https://cmu-poker-ai-2024.streamlit.app/
 Make sure you have the environment set up as in the previous section.
 
 ```bash
+python -m venv .venv
+source .venv/bin/activate
 pip install -r ./engine/requirements.txt
 pip install -r ./python_skeleton/requirements.txt
 ```
