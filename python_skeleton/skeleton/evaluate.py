@@ -7,7 +7,7 @@ there is a flop, of 1 card. A round of betting occurs.
 
 there is a river, of 1 card. A round of betting occurs.
 
-The hand rankings involve 4 cards:
+The hand rankings involve at most 4 cards (if a hand could belong to two rankings, it counts as the highest ranking):
 straight flush (18): 2d 3d 4d 5d
 trips (216): 6d 6s 6h
 two pair (324): 4s 4h 9d 9h
