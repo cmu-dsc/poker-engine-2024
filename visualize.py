@@ -26,7 +26,7 @@ def card_name_to_full_name(card_name):
     return f"{number}_of_{suit_to_word[suit]}"
     
 
-def update_table_image(player1_cards, player2_cards, player1_bet, player2_bet, community_cards, player1_wins, log):
+def update_table_image(player1_cards, player2_cards, player1_bet, player2_bet, community_cards, round_result, log):
     """
     Update the poker table image with the given player cards.
     """
@@ -66,11 +66,10 @@ def update_table_image(player1_cards, player2_cards, player1_bet, player2_bet, c
         log = log[:5] + "\n" + log[5:]
     font = ImageFont.truetype("images/Arial.ttf", log_font_size)
     draw.text((table_img.width // 2 - 1000, table_img.height // 2 - log_font_size), log, fill="gold", font=font)
-    if player1_wins is not None:
+    if round_result is not None:
         draw.rectangle([0, 0, 3000, 2000], fill="black")
-        winner_text = "Player 1 wins" if player1_wins else "Player 2 wins"
         font = ImageFont.truetype("images/CinzelDecorative-Bold.ttf", 100)
-        draw.text((table_img.width // 2 - 300, table_img.height // 2 - 100), winner_text, fill="gold", font=font)
+        draw.text((table_img.width // 2 - 500, table_img.height // 2 - 100), round_result, fill="gold", font=font)
 
     return table_img
 
@@ -80,49 +79,47 @@ def get_poker_table(round_log, action_num):
     Get the poker table image for the given round log and action number.
     """
     round_log = round_log.split("\n")
+    round_num = int(round_log[0].split("Round #")[1])
+
+    # Get the player names
+    player1_name = round_log[4-round_num%2].split("dealt ")[0]
 
     # Get the cards for the players
-    player1_cards = round_log[3].split("dealt ")[1]
-    player2_cards = round_log[4].split("dealt ")[1]
+    player1_cards = round_log[4-round_num%2].split("dealt ")[1]
+    player2_cards = round_log[3+round_num%2].split("dealt ")[1]
     player1_cards = ast.literal_eval(player1_cards)
     player2_cards = ast.literal_eval(player2_cards)
     player1_cards = [f"images/cards/{card_name_to_full_name(card)}.png" for card in player1_cards]
     player2_cards = [f"images/cards/{card_name_to_full_name(card)}.png" for card in player2_cards]
 
-    # Get blinds 
-    blind1 = round_log[1].split(" posts")[0][-1]
-    blind2 = round_log[2].split(" posts")[0][-1]
-
-    player1_bet = 1 if blind1 == "1" else 2
-    player2_bet = 1 if blind2 == "1" else 2
-
+    player1_bet, player2_bet = 2-round_num%2, 1+round_num%2
     community_cards = []
-    player1_wins = None
+    round_result = None
 
-    if action_num == 0:
-        return update_table_image(player1_cards, player2_cards, player1_bet, player2_bet, community_cards, player1_wins, round_log[4])
+    if action_num < 5:
+        return update_table_image(player1_cards, player2_cards, player1_bet, player2_bet, community_cards, round_result, round_log[action_num])
     
     for i in range(5, len(round_log)):
         if "Board" in round_log[i]:
             community_cards = ast.literal_eval(round_log[i].split("Board: ")[1].split(" Pot:")[0])
             community_cards = [f"images/cards/{card_name_to_full_name(card)}.png" for card in community_cards]
         if "calls" in round_log[i]:
-            if "bot1" in round_log[i]:
+            if player1_name in round_log[i]:
                 player1_bet = player2_bet
             else:
                 player2_bet = player1_bet
         elif "raises" in round_log[i]:
-            if "bot1" in round_log[i]:
+            if player1_name in round_log[i]:
                 player1_bet = int(round_log[i].split("raises to ")[1])
             else:
                 player2_bet = int(round_log[i].split("raises to ")[1])            
-        elif "awarded" in round_log[i] and player1_wins is None:
-            player1_wins = round_log[i].split(" awarded ")[0] == "bot1"
+        elif "awarded" in round_log[i] and round_result is None:
+            round_result = round_log[i] + "\n" + round_log[i+1]
 
-        if i == 5 + action_num - 1:
-            return update_table_image(player1_cards, player2_cards, player1_bet, player2_bet, community_cards, player1_wins, round_log[i])
+        if i == action_num:
+            return update_table_image(player1_cards, player2_cards, player1_bet, player2_bet, community_cards, round_result, round_log[i])
 
-    return update_table_image(player1_cards, player2_cards, player1_bet, player2_bet, community_cards, player1_wins, round_log[i])
+    return update_table_image(player1_cards, player2_cards, player1_bet, player2_bet, community_cards, round_result, round_log[i])
 
 
 def visualize(logs):
