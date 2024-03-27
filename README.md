@@ -1,5 +1,8 @@
 # CMU Poker Bot Competition 2024 Engine
 
+## Your job
+Edit ```python_skeleton/player.py```
+
 ## To run
 
 ### As subprocesses
