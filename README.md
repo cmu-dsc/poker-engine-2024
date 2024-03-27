@@ -41,7 +41,7 @@ source .venv/bin/activate
 pip install -r ./engine/requirements.txt
 pip install -r ./python_skeleton/requirements.txt
 ```
-
+Then install streamlit, pillow
 ```bash
 pip install streamlit==1.32.2
 pip install pillow==10.2.0
