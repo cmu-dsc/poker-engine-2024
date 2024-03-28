@@ -11,7 +11,7 @@ from skeleton.states import GameState, TerminalState, RoundState
 from skeleton.states import NUM_ROUNDS, STARTING_STACK, BIG_BLIND, SMALL_BLIND
 from skeleton.bot import Bot
 from skeleton.runner import parse_args, run_bot
-
+from skeleton.evaluate import evaluate
 
 class Player(Bot):
     """
@@ -102,6 +102,7 @@ class Player(Bot):
         """
         my_contribution = STARTING_STACK - observation["my_stack"] # the number of chips you have contributed to the pot
         opp_contribution = STARTING_STACK - observation["opp_stack"] # the number of chips your opponent has contributed to the pot
+        pot_size = my_contribution + opp_contribution # the number of chips in the pot
         continue_cost = observation["opp_pip"] - observation["my_pip"] # the number of chips needed to stay in the pot
 
         self.log.append("My cards: " + str(observation["my_cards"]))
@@ -111,37 +112,37 @@ class Player(Bot):
         self.log.append("My bankroll: " + str(observation["my_bankroll"]))
 
         # Original probability calculation
-        # leftover_cards = [f"{rank}{suit}" for rank in "123456789" for suit in "shd" if f"{rank}{suit}" not in my_cards + board_cards]
-        # possible_card_comb = list(itertools.permutations(leftover_cards, 4 - len(board_cards)))
-        # possible_card_comb = [board_cards + list(c) for c in possible_card_comb]
-        # result = map(lambda x: self.pre_computed_evals['_'.join(sorted(my_cards+x[:2]))] > self.pre_computed_evals['_'.join(sorted(x))], possible_card_comb)
+        # leftover_cards = [f"{rank}{suit}" for rank in "123456789" for suit in "shd" if f"{rank}{suit}" not in observation["my_cards"] + observation["board_cards"]]
+        # possible_card_comb = list(itertools.permutations(leftover_cards, 4 - len(observation["board_cards"])))
+        # possible_card_comb = [observation["board_cards"] + list(c) for c in possible_card_comb]
+        # result = map(lambda x: evaluate(observation["my_cards"], x[:2]) > evaluate(x[:2], x[2:]), possible_card_comb)
         # prob = sum(result) / len(possible_card_comb)
 
         # Use pre-computed probability calculation
-        prob = self.pre_computed_probs['_'.join(sorted(observation["my_cards"])) + '_' + '_'.join(sorted(observation["board_cards"]))]
+        equity = self.pre_computed_probs['_'.join(sorted(observation["my_cards"])) + '_' + '_'.join(sorted(observation["board_cards"]))]
+        pot_odds = continue_cost / (pot_size + continue_cost)
 
-        expected_gain = prob * max(my_contribution, opp_contribution) - (1 - prob) * max(my_contribution, opp_contribution)
+        self.log.append(f"Equity: {equity}")
+        self.log.append(f"Pot odds: {pot_odds}")
 
-        self.log.append(f"Winning probability: {prob}")
-        self.log.append(f"Expected gain: {expected_gain}")
-
+        # If the villain raised, adjust the probability
         if continue_cost > 1:
-            prob = prob * 0.8
-            self.log.append(f"Adjusted Winning probability: {prob}")
+            equity = (equity - 0.5) / 0.5
+            self.log.append(f"Adjusted equity: {equity}")
 
-        if prob > 0.7 and RaiseAction in observation["legal_actions"]:
-            min_cost = observation["min_raise"] - observation["my_pip"] # the cost of a minimum bet/raise
-            max_cost = observation["max_raise"] - observation["my_pip"] # the cost of a maximum bet/raise
-            raise_amount = min(int(observation["min_raise"]*1.5), observation["max_raise"])
+        if equity > 0.8 and RaiseAction in observation["legal_actions"]:
+            raise_amount = min(int(pot_size*0.75), observation["max_raise"])
+            raise_amount = max(raise_amount, observation["min_raise"])
             action = RaiseAction(raise_amount)
-        elif prob < 0.4 and continue_cost > 1 and FoldAction in observation["legal_actions"]:
-            action = FoldAction()
-        elif CheckAction in observation["legal_actions"]:
+        elif CheckAction in observation["legal_actions"] and equity >= pot_odds:
             action = CheckAction()
-        else:
+        elif CallAction in observation["legal_actions"]:
             action = CallAction()
+        else:
+            action = FoldAction()
 
         self.log.append(str(action) + "\n")
+
         return action
 
 if __name__ == '__main__':

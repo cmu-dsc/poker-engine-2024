@@ -7,7 +7,7 @@ there is a flop, of 1 card. A round of betting occurs.
 
 there is a river, of 1 card. A round of betting occurs.
 
-The hand rankings involve at most 4 cards (if a hand could belong to two rankings, it counts as the highest ranking):
+The hand rankings involve 4 cards:
 straight flush (18): 2d 3d 4d 5d
 trips (216): 6d 6s 6h
 two pair (324): 4s 4h 9d 9h
@@ -59,7 +59,7 @@ def is_4flush(hand: List[str]) -> bool:
 def is_4straight(hand: List[str]) -> bool:
     ranks = [int(card[0]) for card in hand]
     return max(ranks) - min(ranks) == 3 and len(set(ranks)) == 4
-
+    
 
 def is_3straight(hand: List[str]) -> bool:
     ranks = sorted(int(card[0]) for card in hand)
@@ -120,72 +120,3 @@ def evaluate(hand: List[str], board: List[str]) -> int:
         return 20000 + frequent_card_value(combined_hand)
     else:
         return 10000 + high_card_value(combined_hand)
-
-
-def evaluate_with_str(cards: str) -> int:
-    combined_hand = cards.split("_")
-    combined_hand = sorted(combined_hand, key=lambda x: int(x[0]), reverse=True)
-    if is_straight_flush(combined_hand):
-        return 80000 + high_card_value(combined_hand)
-    elif is_trips(combined_hand):
-        return 70000 + frequent_card_value(combined_hand)
-    elif is_two_pair(combined_hand):
-        return 60000 + high_card_value(combined_hand)
-    elif is_4flush(combined_hand):
-        return 50000 + high_card_value(combined_hand)
-    elif is_4straight(combined_hand):
-        return 40000 + high_card_value(combined_hand)
-    elif is_3straight(combined_hand):
-        return 30000 + high_card_value(find_straight(combined_hand))
-    elif is_pair(combined_hand):
-        return 20000 + frequent_card_value(combined_hand)
-    else:
-        return 10000 + high_card_value(combined_hand)
-
-
-import itertools
-import pickle
-
-# cards = [f"{rank}{suit}" for rank in "123456789" for suit in "shd"]
-# possible_card_comb = list(itertools.combinations(cards, 4))
-# results = dict()
-# for c in possible_card_comb:
-#     c = sorted(c)
-#     results['_'.join(c)] = evaluate_with_str('_'.join(c))
-# pickle.dump(results, open("pre_computed_evals.pkl", "wb"))
-
-pre_computed_evals = pickle.load(open("pre_computed_evals.pkl", "rb"))
-cards = [f"{rank}{suit}" for rank in "123456789" for suit in "shd"]
-possible_my_cards = list(itertools.combinations(cards, 2))
-results = dict()
-
-for i in range(3):
-    for my_cards in possible_my_cards:
-        my_cards = list(my_cards)
-        possible_board_cards = list(
-            itertools.combinations([c for c in cards if c not in my_cards], i)
-        )
-        for board_cards in possible_board_cards:
-            board_cards = list(board_cards)
-            leftover_cards = [
-                f"{rank}{suit}"
-                for rank in "123456789"
-                for suit in "shd"
-                if f"{rank}{suit}" not in my_cards + board_cards
-            ]
-            possible_card_comb = list(
-                itertools.permutations(leftover_cards, 4 - len(board_cards))
-            )
-            possible_card_comb = [board_cards + list(c) for c in possible_card_comb]
-            result = map(
-                lambda x: pre_computed_evals["_".join(sorted(my_cards + x[:2]))]
-                > pre_computed_evals["_".join(sorted(x))],
-                possible_card_comb,
-            )
-            prob = sum(result) / len(possible_card_comb)
-            results[
-                "_".join(sorted(my_cards)) + "_" + "_".join(sorted(board_cards))
-            ] = prob
-
-print(len(results))
-pickle.dump(results, open("pre_computed_probs.pkl", "wb"))

@@ -111,7 +111,7 @@ class Runner(PokerBotServicer):
             "legal_actions": self.round_state.legal_actions(),
             "street": self.round_state.street,
             "my_cards": self.round_state.hands[0],
-            "board_cards": tuple(self.round_state.board),
+            "board_cards": list(self.round_state.board),
             "my_pip": self.round_state.pips[active],
             "opp_pip": self.round_state.pips[1 - active],
             "my_stack": self.round_state.stacks[active],
