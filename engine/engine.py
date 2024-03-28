@@ -131,9 +131,18 @@ class Game:
 
             active = round_state.button % 2
             player = self.players[active]
-            action = player.request_action(
-                hands[active], round_state.board, self.new_actions[active]
-            )
+
+            if player.game_clock <= 0:
+                self.log.append(f"{player.name} ran out of time.")
+                action = FoldAction()
+            try:
+                action = player.request_action(
+                    hands[active], round_state.board, self.new_actions[active]
+                )
+            except TimeoutError:
+                self.log.append(f"{player.name} timed out.")
+                action = FoldAction()
+
             action = self._validate_action(action, round_state, player.name)
             self.log_action(player.name, action, round_state)
 
@@ -165,21 +174,30 @@ class Game:
         player_names = [PLAYER_1_NAME, PLAYER_2_NAME]
 
         print("Checking ready...")
-        if not all(player.check_ready(player_names) for player in self.players):
+        ready = [player.check_ready(player_names) for player in self.players]
+        if not all(ready):
             print("One or more bots are not ready. Aborting the match.")
-            return
+            self.log.append("One or more bots are not ready. Aborting the match.")
+            if not any(ready):
+                self.log.append("Both players forfeited the match.")
+            else:
+                forfeiter = ready.index(False)
+                self.log.append("Player {} forfeited the match.".format(player_names[forfeiter]))
+                # Fold 1000 rounds = 1*500 small blind + 2*500 big blind = 1500
+                self.players[1 - forfeiter].bankroll += 1500
+                self.players[forfeiter].bankroll -= 1500
+        else:
+            print("Starting match...")
+            self.original_players = self.players.copy()
+            for self.round_num in range(1, NUM_ROUNDS + 1):
+                if self.round_num % 50 == 0:
+                    print(f"Starting round {self.round_num}...")
+                    print(f"{self.players[0].name} remaining time: {self.players[0].game_clock}")
+                    print(f"{self.players[1].name} remaining time: {self.players[1].game_clock}")
+                self.log.append(f"\nRound #{self.round_num}")
 
-        print("Starting match...")
-        self.original_players = self.players.copy()
-        for self.round_num in range(1, NUM_ROUNDS + 1):
-            if self.round_num % 50 == 0:
-                print(f"Starting round {self.round_num}...")
-                print(f"{self.players[0].name} remaining time: {self.players[0].game_clock}")
-                print(f"{self.players[1].name} remaining time: {self.players[1].game_clock}")
-            self.log.append(f"\nRound #{self.round_num}")
-
-            self.run_round((self.round_num == NUM_ROUNDS))
-            self.players = self.players[::-1]  # Alternate the dealer
+                self.run_round((self.round_num == NUM_ROUNDS))
+                self.players = self.players[::-1]  # Alternate the dealer
 
         self.log.append(f"{self.original_players[0].name} Bankroll: {self.original_players[0].bankroll}")
         self.log.append(f"{self.original_players[1].name} Bankroll: {self.original_players[1].bankroll}")
@@ -249,8 +267,13 @@ class Game:
         if isinstance(action, RaiseAction):
             amount = int(action.amount)
             min_raise, max_raise = round_state.raise_bounds()
+            active = self.button % 2
+            continue_cost = self.pips[1 - active] - self.pips[active]
             if RaiseAction in legal_actions and min_raise <= amount <= max_raise:
                 return action
+            elif CallAction in legal_actions and amount > continue_cost:
+                self.log.append(f"{player_name} attempted illegal RaiseAction with amount {amount}")
+                return CallAction()
             else:
                 self.log.append(f"{player_name} attempted illegal RaiseAction with amount {amount}")
         elif type(action) in legal_actions:
