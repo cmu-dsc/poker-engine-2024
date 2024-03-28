@@ -51,6 +51,12 @@ pip install pillow==10.2.0
 streamlit run visualize.py
 ```
 
+If you ever use any additional packages, be sure to regenerate `requirements.txt` like so:
+
+```bash
+pip freeze > python_skeleton/requirements.txt
+```
+
 ## Gym env
 
 Refer to ```test_gym_env.py``` and ```engine/gym_env.py``` for more details.
