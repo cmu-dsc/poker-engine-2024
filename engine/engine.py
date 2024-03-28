@@ -258,8 +258,13 @@ class Game:
         if isinstance(action, RaiseAction):
             amount = int(action.amount)
             min_raise, max_raise = round_state.raise_bounds()
+            active = self.button % 2
+            continue_cost = self.pips[1 - active] - self.pips[active]
             if RaiseAction in legal_actions and min_raise <= amount <= max_raise:
                 return action
+            elif CallAction in legal_actions and amount > continue_cost:
+                self.log.append(f"{player_name} attempted illegal RaiseAction with amount {amount}")
+                return CallAction()
             else:
                 self.log.append(f"{player_name} attempted illegal RaiseAction with amount {amount}")
         elif type(action) in legal_actions:
