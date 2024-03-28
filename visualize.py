@@ -110,9 +110,9 @@ def get_poker_table(round_log, action_num):
                 player2_bet = player1_bet
         elif "raises" in round_log[i]:
             if player1_name in round_log[i]:
-                player1_bet = int(round_log[i].split("raises to ")[1])
+                player1_bet += int(round_log[i].split("raises to ")[1])
             else:
-                player2_bet = int(round_log[i].split("raises to ")[1])            
+                player2_bet += int(round_log[i].split("raises to ")[1])            
         elif "awarded" in round_log[i] and round_result is None:
             round_result = round_log[i] + "\n" + round_log[i+1]
 
