@@ -1,5 +1,8 @@
 # CMU Poker Bot Competition 2024 Engine
 
+## Your job
+Edit ```python_skeleton/player.py```
+
 ## To run
 
 ### As subprocesses
@@ -36,12 +39,15 @@ https://cmu-poker-ai-2024.streamlit.app/
 Make sure you have the environment set up as in the previous section.
 
 ```bash
+python -m venv .venv
+source .venv/bin/activate
 pip install -r ./engine/requirements.txt
 pip install -r ./python_skeleton/requirements.txt
 ```
-
+Then install streamlit, pillow
 ```bash
-pip install streamlit
+pip install streamlit==1.32.2
+pip install pillow==10.2.0
 streamlit run visualize.py
 ```
 
