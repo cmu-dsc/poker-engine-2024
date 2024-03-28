@@ -100,10 +100,10 @@ def add_match_entry(player1_bankroll: int, player2_bankroll: int) -> None:
         player1_bankroll (int): The final bankroll of player 1.
         player2_bankroll (int): The final bankroll of player 2.
     """
-    instance_connection_name = os.environ["INSTANCE_CONNECTION_NAME"]
-    db_user = os.environ["DB_USER"]
-    db_pass = os.environ["DB_PASS"]
-    db_name = os.environ["DB_NAME"]
+    instance_connection_name = os.getenv("INSTANCE_CONNECTION_NAME")
+    db_user = os.getenv("DB_USER")
+    db_pass = os.getenv("DB_PASS")
+    db_name = os.getenv("DB_NAME")
 
     if not (instance_connection_name or db_user or db_pass or db_name):
         print("No connection name or database credentials found, skipping updating table.")
