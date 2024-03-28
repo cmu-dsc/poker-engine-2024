@@ -134,10 +134,10 @@ class Player(Bot):
             raise_amount = min(int(pot_size*0.75), observation["max_raise"])
             raise_amount = max(raise_amount, observation["min_raise"])
             action = RaiseAction(raise_amount)
-        elif CheckAction in observation["legal_actions"] and equity >= pot_odds:
-            action = CheckAction()
-        elif CallAction in observation["legal_actions"]:
+        elif CallAction in observation["legal_actions"] and equity >= pot_odds:
             action = CallAction()
+        elif CheckAction in observation["legal_actions"]:
+            action = CheckAction()
         else:
             action = FoldAction()
 
