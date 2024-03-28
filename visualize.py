@@ -99,8 +99,11 @@ def get_poker_table(round_log, action_num):
     if action_num < 5:
         return update_table_image(player1_cards, player2_cards, player1_bet, player2_bet, community_cards, round_result, round_log[action_num])
     
+    prev_round_bet = 0
     for i in range(5, len(round_log)):
         if "Board" in round_log[i]:
+            prev_round_bet = int(round_log[i].split("Board: ")[1].split(" Pot:")[1]) / 2
+            prev_round_bet = int(prev_round_bet) if prev_round_bet.is_integer() else prev_round_bet
             community_cards = ast.literal_eval(round_log[i].split("Board: ")[1].split(" Pot:")[0])
             community_cards = [f"images/cards/{card_name_to_full_name(card)}.png" for card in community_cards]
         if "calls" in round_log[i]:
@@ -110,17 +113,15 @@ def get_poker_table(round_log, action_num):
                 player2_bet = player1_bet
         elif "raises" in round_log[i]:
             if player1_name in round_log[i]:
-                player1_bet += int(round_log[i].split("raises to ")[1])
+                player1_bet = int(round_log[i].split("raises to ")[1]) + prev_round_bet
             else:
-                player2_bet += int(round_log[i].split("raises to ")[1])            
+                player2_bet = int(round_log[i].split("raises to ")[1]) + prev_round_bet            
         elif "awarded" in round_log[i] and round_result is None:
             round_result = round_log[i] + "\n" + round_log[i+1]
-
         if i == action_num:
             return update_table_image(player1_cards, player2_cards, player1_bet, player2_bet, community_cards, round_result, round_log[i])
 
     return update_table_image(player1_cards, player2_cards, player1_bet, player2_bet, community_cards, round_result, round_log[i])
-
 
 def visualize(logs):
     # Choose a round to display
