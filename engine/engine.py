@@ -165,21 +165,30 @@ class Game:
         player_names = [PLAYER_1_NAME, PLAYER_2_NAME]
 
         print("Checking ready...")
-        if not all(player.check_ready(player_names) for player in self.players):
+        ready = [player.check_ready(player_names) for player in self.players]
+        if not all(ready):
             print("One or more bots are not ready. Aborting the match.")
-            return
+            self.log.append("One or more bots are not ready. Aborting the match.")
+            if not any(ready):
+                self.log.append("Both players forfeited the match.")
+            else:
+                forfeiter = ready.index(False)
+                self.log.append("Player {} forfeited the match.".format(player_names[forfeiter]))
+                # Fold 1000 rounds = 1*500 small blind + 2*500 big blind = 1500
+                self.players[1 - forfeiter].bankroll += 1500
+                self.players[forfeiter].bankroll -= 1500
+        else:
+            print("Starting match...")
+            self.original_players = self.players.copy()
+            for self.round_num in range(1, NUM_ROUNDS + 1):
+                if self.round_num % 50 == 0:
+                    print(f"Starting round {self.round_num}...")
+                    print(f"{self.players[0].name} remaining time: {self.players[0].game_clock}")
+                    print(f"{self.players[1].name} remaining time: {self.players[1].game_clock}")
+                self.log.append(f"\nRound #{self.round_num}")
 
-        print("Starting match...")
-        self.original_players = self.players.copy()
-        for self.round_num in range(1, NUM_ROUNDS + 1):
-            if self.round_num % 50 == 0:
-                print(f"Starting round {self.round_num}...")
-                print(f"{self.players[0].name} remaining time: {self.players[0].game_clock}")
-                print(f"{self.players[1].name} remaining time: {self.players[1].game_clock}")
-            self.log.append(f"\nRound #{self.round_num}")
-
-            self.run_round((self.round_num == NUM_ROUNDS))
-            self.players = self.players[::-1]  # Alternate the dealer
+                self.run_round((self.round_num == NUM_ROUNDS))
+                self.players = self.players[::-1]  # Alternate the dealer
 
         self.log.append(f"{self.original_players[0].name} Bankroll: {self.original_players[0].bankroll}")
         self.log.append(f"{self.original_players[1].name} Bankroll: {self.original_players[1].bankroll}")
