@@ -143,6 +143,10 @@ class Game:
                 except TimeoutError:
                     self.log.append(f"{player.name} timed out.")
                     action = FoldAction()
+                except Exception as e:
+                    player.log.append(f"{[player.name]} raised an exception: {e}")
+                    self.log.append(f"{player.name} raised an exception.")
+                    action = FoldAction()
 
             action = self._validate_action(action, round_state, player.name)
             self.log_action(player.name, action, round_state)
