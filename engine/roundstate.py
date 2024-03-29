@@ -1,5 +1,6 @@
 from collections import namedtuple
 from typing import Set, Type
+from itertools import combinations
 
 from .actions import (
     Action,
@@ -34,14 +35,26 @@ class RoundState(
         """
         Compares the player's hands and computes payoffs.
         """
-        score0 = evaluate(self.hands[0], self.board)
-        score1 = evaluate(self.hands[1], self.board)
-        if score0 > score1:
-            delta = STARTING_STACK - self.stacks[1]
-        elif score0 < score1:
-            delta = self.stacks[0] - STARTING_STACK
-        else:  # split the pot
-            delta = (self.stacks[0] - self.stacks[1]) // 2
+        if len(self.board) < 2: #equity chop ALL IN!
+            p0Eq = 0
+            comb = 0
+            for combo in combinations(self.deck.cards, 2 - len(self.board)):
+                board = self.board + list(combo)
+                score0 = evaluate(self.hands[0], board)
+                score1 = evaluate(self.hands[1], board)
+                if score0 > score1: p0Eq += 2
+                if score0 == score1: p0Eq += 1
+                comb += 2
+            delta = round(2 * STARTING_STACK * p0Eq / comb) - STARTING_STACK
+        else:
+            score0 = evaluate(self.hands[0], self.board)
+            score1 = evaluate(self.hands[1], self.board)
+            if score0 > score1:
+                delta = STARTING_STACK - self.stacks[1]
+            elif score0 < score1:
+                delta = self.stacks[0] - STARTING_STACK
+            else:  # split the pot
+                delta = (self.stacks[0] - self.stacks[1]) // 2
         return TerminalState([delta, -delta], self)
 
     def legal_actions(self) -> Set[Type]:
@@ -87,7 +100,7 @@ class RoundState(
         """
         Resets the players' pips and advances the game tree to the next round of betting.
         """
-        if self.street >= 2:  # After river, proceed to showdown
+        if self.street >= 2 or sum(self.stacks)==0:  # After river, proceed to showdown OR equity chop
             return self.showdown()
 
         # Dealing the next card (flop or river) and advancing the street
