@@ -1,6 +1,8 @@
 import streamlit as st
 import ast
 from PIL import Image, ImageDraw, ImageFont
+from engine.config import STARTING_STACK
+from engine.evaluate import equity
 
 
 def renew_action_num():
@@ -19,6 +21,7 @@ def use_uploaded_logs():
     st.session_state.use_default_logs = False
     
 
+
 def card_name_to_full_name(card_name):
     number = card_name[0]
     suit = card_name[1]
@@ -26,11 +29,12 @@ def card_name_to_full_name(card_name):
     return f"{number}_of_{suit_to_word[suit]}"
     
 
-def update_table_image(player1_cards, player2_cards, player1_bet, player2_bet, community_cards, round_result, log):
+def update_table_image(player1_cards, player2_cards, player1_bet, player2_bet, community_cards, round_result, log, round_num):
     """
     Update the poker table image with the given player cards.
     """
     table_img = Image.open("images/poker_table.png")
+    button = Image.open("images/button.png")
     player1_cards = [Image.open(card) for card in player1_cards]
     player2_cards = [Image.open(card) for card in player2_cards]
     community_cards = [Image.open(card) for card in community_cards]
@@ -58,6 +62,11 @@ def update_table_image(player1_cards, player2_cards, player1_bet, player2_bet, c
         table_img.paste(player2_cards[i], (table_img.width // 2 - card_width // 2 + 300 * i - 150, table_img.height // 2 - card_height // 2 - 400))
     for i in range(len(community_cards)):
         table_img.paste(community_cards[i], (table_img.width // 2 - card_width // 2 + 300 * i - 150, table_img.height // 2 - card_height // 2))
+    
+
+
+    z = (round_num % 2) * 2 - 1
+    table_img.paste(button, (table_img.width // 2 - 400, table_img.height // 2 + z * 200 - 50))
 
     # Add log as text
     log_font_size = 50
@@ -97,7 +106,7 @@ def get_poker_table(round_log, action_num):
     round_result = None
 
     if action_num < 5:
-        return update_table_image(player1_cards, player2_cards, player1_bet, player2_bet, community_cards, round_result, round_log[action_num])
+        return update_table_image(player1_cards, player2_cards, player1_bet, player2_bet, community_cards, round_result, round_log[action_num], round_num)
     
     prev_round_bet = 0
     for i in range(5, len(round_log)):
@@ -111,21 +120,22 @@ def get_poker_table(round_log, action_num):
                 player1_bet = player2_bet
             else:
                 player2_bet = player1_bet
-        elif "raises" in round_log[i]:
+        elif "bets" in round_log[i]:
             if player1_name in round_log[i]:
-                player1_bet = int(round_log[i].split("raises to ")[1]) + prev_round_bet
+                player1_bet = int(round_log[i].split("bets ")[1]) + prev_round_bet
             else:
-                player2_bet = int(round_log[i].split("raises to ")[1]) + prev_round_bet            
-        elif "awarded" in round_log[i] and round_result is None:
-            round_result = round_log[i] + "\n" + round_log[i+1]
+                player2_bet = int(round_log[i].split("bets ")[1]) + prev_round_bet            
+        elif i == len(round_log)-1 and round_result is None:
+            round_result = round_log[i-1] + "\n" + round_log[i]
         if i == action_num:
-            return update_table_image(player1_cards, player2_cards, player1_bet, player2_bet, community_cards, round_result, round_log[i])
+            return update_table_image(player1_cards, player2_cards, player1_bet, player2_bet, community_cards, round_result, round_log[i], round_num)
 
-    return update_table_image(player1_cards, player2_cards, player1_bet, player2_bet, community_cards, round_result, round_log[i])
+    return update_table_image(player1_cards, player2_cards, player1_bet, player2_bet, community_cards, round_result, round_log[i], round_num)
 
 def visualize(logs):
     # Choose a round to display
-    round_num = st.slider("Choose a round", 1, len(logs)-1, 1, on_change=renew_action_num)
+    #round_num = st.slider("Choose a round", 1, len(logs)-1, 1, on_change=renew_action_num)
+    round_num = st.number_input("Choose a round", 1, len(logs)-1, 1, on_change=renew_action_num)
 
     # Expander for the logs
     with st.expander("Round Logs"):
@@ -136,11 +146,13 @@ def visualize(logs):
         st.session_state["action_num"] = 0
     col1, col2 = st.columns([0.3, 1])
     with col1:
-        if st.button("Next action") and st.session_state.action_num < len(logs[round_num].split("\n")) - 5:
-            st.session_state.action_num += 1
+        if st.button("Next action") and st.session_state.action_num < len(logs[round_num].split("\n")) - 1:
+            if st.session_state.action_num == 0: st.session_state.action_num = 5
+            else: st.session_state.action_num += 1
     with col2:
         if st.button("Previous action") and st.session_state.action_num > 0:
-            st.session_state.action_num -= 1
+            if st.session_state.action_num == 5: st.session_state.action_num = 0
+            else: st.session_state.action_num -= 1
     poker_table_image = get_poker_table(logs[round_num], st.session_state.action_num)
     st.image(poker_table_image, use_column_width=True)
 
@@ -174,6 +186,3 @@ if st.session_state.use_default_logs:
     visualize(st.session_state.uploaded_log)
 elif st.session_state.uploaded_log is not None:
     visualize(st.session_state.uploaded_log)
-
-
-
