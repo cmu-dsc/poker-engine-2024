@@ -120,7 +120,10 @@ class Runner(PokerBotServicer):
             "min_raise": self.round_state.raise_bounds()[0],
             "max_raise": self.round_state.raise_bounds()[1],
         }
-        action = self.pokerbot.get_action(observation)
+        try:
+            action = self.pokerbot.get_action(observation)
+        except Exception as e:
+            self.pokerbot.log.append(f"Error raised: {e}")
         self.round_state = self.round_state.proceed(action)
 
         return self._convert_action_to_response(action)
