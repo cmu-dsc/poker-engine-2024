@@ -97,8 +97,8 @@ class Game:
             self.log.append(f"{player_name} checks")
             self._create_csv_row(round_state, player_name, "check", None)
         else:  # isinstance(action, RaiseAction)
-            self.log.append(f"{player_name} raises to {str(action.amount)}")
-            self._create_csv_row(round_state, player_name, "raises", action.amount)
+            self.log.append(f"{player_name} bets {str(action.amount)}")
+            self._create_csv_row(round_state, player_name, "bets", action.amount)
 
     def log_terminal_state(self, round_state: TerminalState) -> None:
         """
