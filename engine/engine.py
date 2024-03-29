@@ -135,13 +135,14 @@ class Game:
             if player.game_clock <= 0:
                 self.log.append(f"{player.name} ran out of time.")
                 action = FoldAction()
-            try:
-                action = player.request_action(
-                    hands[active], round_state.board, self.new_actions[active]
-                )
-            except TimeoutError:
-                self.log.append(f"{player.name} timed out.")
-                action = FoldAction()
+            else:
+                try:
+                    action = player.request_action(
+                        hands[active], round_state.board, self.new_actions[active]
+                    )
+                except TimeoutError:
+                    self.log.append(f"{player.name} timed out.")
+                    action = FoldAction()
 
             action = self._validate_action(action, round_state, player.name)
             self.log_action(player.name, action, round_state)
