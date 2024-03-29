@@ -1,8 +1,6 @@
 import streamlit as st
 import ast
 from PIL import Image, ImageDraw, ImageFont
-from engine.config import STARTING_STACK
-from engine.evaluate import equity
 
 
 def renew_action_num():
