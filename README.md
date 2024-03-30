@@ -59,6 +59,11 @@ pip freeze > python_skeleton/requirements.txt
 
 ## Gym env
 
+Run 
+```bash
+pip install gymnasium
+```
+
 Refer to ```test_gym_env.py``` and ```engine/gym_env.py``` for more details.
 
 ### With multiple bots
