@@ -96,7 +96,7 @@ def find_straight(hand: List[str]) -> List[str]:
     s1 = list(sorted(hand))[1:4]
     s2 = list(sorted(hand))[0:3]
     ranks = list(sorted([int(card[0]) for card in hand]))
-    if ranks[2] - ranks[0] == 2:
+    if ranks[3] - ranks[1] == 2:
         return s1
     else:
         return s2
