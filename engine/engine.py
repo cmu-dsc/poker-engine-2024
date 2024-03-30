@@ -276,7 +276,7 @@ class Game:
             continue_cost = round_state.pips[1 - active] - round_state.pips[active]
             if RaiseAction in legal_actions and min_raise <= amount <= max_raise:
                 return action
-            elif CallAction in legal_actions and amount > continue_cost:
+            elif CallAction in legal_actions and amount >= continue_cost:
                 self.log.append(f"{player_name} attempted illegal RaiseAction with amount {amount}")
                 return CallAction()
             else:
